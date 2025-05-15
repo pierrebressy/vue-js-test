@@ -21,11 +21,11 @@ export default function GraphTab({ dataManager }) {
         return mode;
     }
 
-    const [days_left, setDays_left] = useState(0);
+    const [days_left, setDays_left] = useState(14);
     const num_days = 100;
     const [byLeg, setByLeg] = useState(false);
     const [computed, setComputed] = useState(false);
-    const [mean_volatility, setMean_volatility] = useState(0.5);
+    const [mean_volatility, setMean_volatility] = useState(0.2);
     const [selectedCombo, setSelectedCombo] = useState("call"); // default is "call"
     const [legs, setLegs] = useState(initial_legs);
     const [sigmaIndex, setSigmaIndex] = useState(0); // start at 1

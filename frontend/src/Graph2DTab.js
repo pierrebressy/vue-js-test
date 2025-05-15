@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useMemo } from 'react';
+import React, { useRef, useEffect, useMemo, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
@@ -32,75 +32,9 @@ ChartJS.unregister({
  });
 */
 
-/*
-function createMultiDraggableLabelPlugin_old(xRefs, myLabelMap, chartRef) {
-    console.log("🚨 createMultiDraggableLabelPlugin", xRefs);
-    return {
-        id: 'multiDraggableLabel',
-        afterDraw(chart) {
-            //if (!chartRef?.current || chart.canvas !== chartRef.current) return;
-            const { ctx, chartArea, scales } = chart;
-            if (!chartArea || !scales?.x || !scales?.y) return;
 
-            const fontSize = 12;
-            const padding = 6;
-            const fontFamily = 'Menlo, monospace';
 
-            chart._labelBoxes = {}; // Store boxes per label
-
-            Object.entries(xRefs).forEach(([labelId, xRef], index) => {
-                const xValue = xRef.current;
-                const xPixel = scales.x.getPixelForValue(xValue);
-
-                // 🔵 Vertical line
-                ctx.save();
-                ctx.beginPath();
-                ctx.moveTo(xPixel, chartArea.top);
-                ctx.lineTo(xPixel, chartArea.bottom);
-                ctx.strokeStyle = index === 0 ? 'blue' : 'red';
-                ctx.lineWidth = 1;
-                ctx.setLineDash([]);
-                ctx.stroke();
-                ctx.restore();
-
-                // 🟦 Label box
-                const yPixel = chartArea.top + 10;//+ index * 30;
-                const label = xValue.toFixed(1);
-                ctx.save();
-                ctx.font = `${fontSize}px ${fontFamily}`;
-                const textWidth = ctx.measureText(label).width;
-                const boxWidth = textWidth + padding * 2;
-                const boxHeight = fontSize + padding;
-                const boxX = xPixel - boxWidth / 2;
-                const boxY = yPixel;
-
-                if (labelId.startsWith('leg')) {
-                    ctx.fillStyle = 'green';
-                } else if (labelId === 'underlying') {
-                    ctx.fillStyle = 'red';
-                } else {
-                    ctx.fillStyle = 'blue';
-                }
-
-                ctx.fillStyle = index === 0 ? 'blue' : 'red';
-                ctx.beginPath();
-                ctx.roundRect?.(boxX, boxY, boxWidth, boxHeight, 4);
-                ctx.fill();
-
-                ctx.fillStyle = 'white';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(label, xPixel, boxY + boxHeight / 2);
-                ctx.restore();
-
-                chart._labelBoxes[labelId] = { x: boxX, y: boxY, width: boxWidth, height: boxHeight };
-            });
-        }
-    };
-}
-*/
-
-function createMultiDraggableLabelPlugin( myLabelMap, chartRef) {
+function createMultiDraggableLabelPlugin(myLabelMap, chartRef) {
     return {
         id: 'multiDraggableLabel',
         afterDraw(chart) {
@@ -173,23 +107,15 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
 
     const chartRefPL = useRef(null);
     const chartRefGreek = useRef(null);
-    const legRefs = useRef([]); // stores refs to x positions
-    const [redraw, setRedraw] = React.useState(false);
     const xRef1 = useRef(160);
     const xRef2 = useRef(210);
-    const draggingLabel = useRef(null); // 'label1' or 'label2' or null
+    const draggingLabel = useRef(null);
     const myLabelMap = useRef([]);
-    /*
-    const pluginDraggable = useMemo(
-        () => createMultiDraggableLabelPlugin({ label1: xRef1, label2: xRef2 }, chartRefPL),
-        []
-    );
-    */
+    const [renderTrigger, setRenderTrigger] = useState(0);
 
     const pluginDraggable = useMemo(
         () => {
             const legs = dataManager.get_combo_params().legs;
-            //console.log("➜ pluginDraggable: legs.length=", legs.length);
 
             myLabelMap.current = [];
             myLabelMap.current.push({ label: 'label1', xRef: xRef1 });
@@ -197,59 +123,16 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
             legs.forEach((_, index) => {
                 myLabelMap.current.push({ label: `leg${index + 1}`, xRef: { current: legs[index].strike } });
             });
-            //console.log("‼️ myLabelMap=", myLabelMap);
 
-            return createMultiDraggableLabelPlugin( myLabelMap, chartRefPL)
+            return createMultiDraggableLabelPlugin(myLabelMap, chartRefPL)
         },
         [dataManager]
     );
 
 
-    /*
-const pluginDraggableMulti = useMemo(() => {
-    if (!dataManager || !legRefs.current.length) return undefined;
-
-    const legs = dataManager.get_combo_params().legs;
-    //console.log("➜ pluginDraggableMulti: legs.length=", legs.length);
-
-    const labelMap = {};
-    let index = 0;
-    legs.forEach((_, index) => {
-        labelMap[`leg${index + 1}`] = legRefs.current[index];
-    });
-    labelMap[`underlying`] = { current: 200 };
-    labelMap[`ref`] = { current: 188.88 };
-
-    //console.log(" 🟢labelMap", labelMap);
-    return createMultiDraggableLabelPlugin(labelMap, chartRefPL);
-}, [dataManager, legRefs.current.length]);
-
-*/
-    /*
-        useEffect(() => {
-            if (dataManager) {
-                console.log('[Graph2DTab] DataManager is ready:', dataManager);
-                // Build chart here
-            }
-        }, [dataManager]);
-        */
-    /*
-        useEffect(() => {
-            if (!dataManager) return;
-    
-            const legs = dataManager.get_combo_params().legs;
-            legRefs.current = legs.map((leg) => {
-                const ref = { current: leg.strike };
-                return ref;
-            });
-        }, [dataManager, legRefs.current.length]);
-    */
-
     useEffect(() => {
-        //console.log(dataManager);
         compute_data_to_display(dataManager, false);
-        setRedraw(false);
-    }, [days_left, mean_volatility, dataManager, redraw]);
+    }, [days_left, mean_volatility, dataManager, renderTrigger]);
 
     useEffect(() => {
         const chart = chartRefPL.current;
@@ -266,9 +149,7 @@ const pluginDraggableMulti = useMemo(() => {
 
         const onMouseDown = (e) => {
             const pos = getMouse(e);
-            //console.log("🟢 onMouseDown", pos);
             const boxes = chart._labelBoxes || {};
-            //console.log("🟢 [onMouseDown] boxes=", boxes);
             for (const [labelId, box] of Object.entries(boxes)) {
                 if (
                     pos.x >= box.x &&
@@ -277,7 +158,6 @@ const pluginDraggableMulti = useMemo(() => {
                     pos.y <= box.y + box.height
                 ) {
                     draggingLabel.current = labelId;
-                    //console.log("🟢 [onMouseDown] ", labelId, myLabelMap.current[labelId].label, myLabelMap.current[labelId].xRef.current);
                     e.preventDefault();
                     break;
                 }
@@ -290,39 +170,32 @@ const pluginDraggableMulti = useMemo(() => {
             const scale = chart.scales.x;
             const xVal = scale.getValueForPixel(pos.x);
 
-            if (myLabelMap.current[draggingLabel.current].label === 'label1') { 
+            const draggedLabel = myLabelMap.current[draggingLabel.current];
+            const label = draggedLabel.label;
+            if (label === 'label1') {
                 xRef1.current = xVal;
-                //console.log("🟠 label1", xVal);
             }
-            if (myLabelMap.current[draggingLabel.current].label === 'label2') xRef2.current = xVal;
-            
-            
-            
-            
-            
-            
-            
-            
-            if (myLabelMap.current[draggingLabel.current].label === 'leg1') {
-                let option = dataManager.get_combo_params().legs[0];
-                option.strike = xVal;
-                myLabelMap.current[draggingLabel.current].xRef.current = xVal;
-                //console.log("🟠 option", dataManager.get_combo_params().legs[0].strike);
+            else if (label === 'label2') {
+                xRef2.current = xVal;
             }
-            if (myLabelMap.current[draggingLabel.current].label === 'leg2') {
-                let option = dataManager.get_combo_params().legs[1];
-                option.strike = xVal;
-                myLabelMap.current[draggingLabel.current].xRef.current = xVal;
-                //console.log("🟠 option", dataManager);
-                setRedraw(true);
+            else if (label.startsWith('leg')) {
+                const legIndex = parseInt(label.replace('leg', '')) - 1;
+                const option = dataManager.get_combo_params().legs[legIndex];
+                if (option) {
+                    option.strike = xVal;
+                    draggedLabel.xRef.current = xVal;
+                    compute_data_to_display(dataManager, false);
+                    setRenderTrigger(prev => prev + 1);
+                }
             }
+
+
 
             chart.update('none');
             e.preventDefault();
         };
 
         const onMouseUp = () => {
-            //console.log("🔴 onMouseUp", draggingLabel.current);
             draggingLabel.current = null;
         };
 
@@ -336,26 +209,6 @@ const pluginDraggableMulti = useMemo(() => {
             canvas.removeEventListener('mouseup', onMouseUp);
         };
     }, []);
-
-    /*
-        useEffect(() => {
-            if (!dataManager) return;
-    
-            dataManager.get_combo_params().legs.forEach(option => {
-                xRef2.current = option.strike;
-            });
-    
-        }, [dataManager]);
-    */
-    /*
-        useEffect(() => {
-            if (!dataManager) return;
-    
-            const legs = dataManager.get_combo_params().legs;
-            legRefs.current = legs.map((leg) => ({ current: leg.strike }));
-            console.log("legRefs", legRefs.current);
-        }, [dataManager]);
-    */
 
 
     if (!dataManager) return <div>Loading chart...</div>;
@@ -439,7 +292,6 @@ const pluginDraggableMulti = useMemo(() => {
 
         ]
     };
-
 
     const createPLOptions = (groupId) => ({
         responsive: true,
@@ -587,6 +439,7 @@ const pluginDraggableMulti = useMemo(() => {
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '4px' }}>
             <div style={{ flex: 6, display: 'flex' }}>
                 <Line
+                    //key={renderTrigger} // 🔥 Force remount
                     ref={chartRefPL}
                     data={chartPL}
                     options={chartOptionsPL}
