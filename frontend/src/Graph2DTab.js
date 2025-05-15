@@ -41,9 +41,21 @@ function createLegLinesPlugin(dataManager, labelRefs) {
                 const xValue = ref.current;
                 const xPixel = scales.x.getPixelForValue(xValue);
 
-                const leg = dataManager.get_combo_params().legs[i];
-                const color = leg.type === 'put' ? 'green' : 'red';
-                const type = leg.type === 'put' ? 'P' : 'C';
+
+                // Determine color and label
+                let color = 'blue';
+                let labelText = `Underlying: ${xValue.toFixed(1)}`;
+
+                if (i < dataManager.get_combo_params().legs.length) {
+                    const leg = dataManager.get_combo_params().legs[i];
+                    color = leg.type === 'put' ? 'green' : 'red';
+                    const type = leg.type === 'put' ? 'P' : 'C';
+                    labelText = `${leg.quantity} ${type} ${xValue.toFixed(1)}`;
+                }
+
+
+
+
 
                 // Draw line
                 ctx.save();
@@ -56,10 +68,9 @@ function createLegLinesPlugin(dataManager, labelRefs) {
                 ctx.restore();
 
                 // Draw label
-                const label = `${leg.qty} ${type} ${xValue.toFixed(1)}`;
                 ctx.save();
                 ctx.font = `${fontSize}px ${fontFamily}`;
-                const textWidth = ctx.measureText(label).width;
+                const textWidth = ctx.measureText(labelText).width;
                 const boxWidth = textWidth + padding * 2;
                 const boxHeight = fontSize + padding;
                 const boxX = xPixel - boxWidth / 2;
@@ -73,7 +84,7 @@ function createLegLinesPlugin(dataManager, labelRefs) {
                 ctx.fillStyle = 'white';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(label, xPixel, boxY + boxHeight / 2);
+                ctx.fillText(labelText, xPixel, boxY + boxHeight / 2);
                 ctx.restore();
 
                 chart._labelBoxes[i] = { x: boxX, y: boxY, width: boxWidth, height: boxHeight };
@@ -95,7 +106,10 @@ export default function Graph2DTab({ dataManager }) {
     useEffect(() => {
         if (!dataManager) return;
         const legs = dataManager.get_combo_params().legs;
-        labelRefs.current = legs.map(leg => ({ current: leg.strike }));
+        labelRefs.current = [
+            ...legs.map(leg => ({ current: leg.strike })),
+            { current: dataManager.get_underlying_price() } // ➕ add underlying
+        ];
     }, [dataManager]);
     /*
         const legLinesPlugin = useMemo(() => {
@@ -144,8 +158,14 @@ export default function Graph2DTab({ dataManager }) {
             const legIndex = draggingLabel.current;
             labelRefs.current[legIndex].current = xVal;
 
-            // 🔁 Update strike in dataManager
-            dataManager.get_combo_params().legs[legIndex].strike = xVal;
+            labelRefs.current[draggingLabel.current].current = xVal;
+
+            if (draggingLabel.current < dataManager.get_combo_params().legs.length) {
+                // 🔁 Update strike in dataManager
+                dataManager.get_combo_params().legs[draggingLabel.current].strike = xVal;
+            } else {
+                dataManager.set_underlying_price(xVal); // underlying
+            }
 
             // ✅ Trigger recomputation if needed
             compute_data_to_display(dataManager, false);
