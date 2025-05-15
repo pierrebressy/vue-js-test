@@ -112,23 +112,48 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
     const draggingLabel = useRef(null);
     const myLabelMap = useRef([]);
     const [renderTrigger, setRenderTrigger] = useState(0);
+    /*
+        const pluginDraggable = useMemo(
+            () => {
+                const legs = dataManager.get_combo_params().legs;
+    
+                myLabelMap.current = [];
+                myLabelMap.current.push({ label: 'label1', xRef: xRef1 });
+                myLabelMap.current.push({ label: 'label2', xRef: xRef2 });
+                legs.forEach((_, index) => {
+                    myLabelMap.current.push({ label: `leg${index + 1}`, xRef: { current: legs[index].strike } });
+                });
+    
+                return createMultiDraggableLabelPlugin(myLabelMap, chartRefPL)
+            },
+            [dataManager]
+        );
+    */
+    const pluginDraggable = createMultiDraggableLabelPlugin(myLabelMap, chartRefPL);
 
-    const pluginDraggable = useMemo(
-        () => {
-            const legs = dataManager.get_combo_params().legs;
+    useEffect(() => {
+        if (!dataManager) return;
 
-            myLabelMap.current = [];
-            myLabelMap.current.push({ label: 'label1', xRef: xRef1 });
-            myLabelMap.current.push({ label: 'label2', xRef: xRef2 });
-            legs.forEach((_, index) => {
-                myLabelMap.current.push({ label: `leg${index + 1}`, xRef: { current: legs[index].strike } });
-            });
+        const legs = dataManager.get_combo_params().legs;
+        const updated = [];
 
-            return createMultiDraggableLabelPlugin(myLabelMap, chartRefPL)
-        },
-        [dataManager]
-    );
+        // Keep label1 and label2
+        updated.push({ label: 'label1', xRef: xRef1 });
+        updated.push({ label: 'label2', xRef: xRef2 });
 
+        // Keep leg refs persistent
+        for (let i = 0; i < legs.length; i++) {
+            if (!myLabelMap.current.find(e => e.label === `leg${i + 1}`)) {
+                updated.push({ label: `leg${i + 1}`, xRef: { current: legs[i].strike } });
+            } else {
+                const existing = myLabelMap.current.find(e => e.label === `leg${i + 1}`);
+                existing.xRef.current = legs[i].strike;
+                updated.push(existing);
+            }
+        }
+
+        myLabelMap.current = updated;
+    }, [dataManager]);
 
     useEffect(() => {
         compute_data_to_display(dataManager, false);
