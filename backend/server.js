@@ -4,6 +4,7 @@ const path = require('path');
 const app = express();
 const PORT = 3001;
 const DATA_FILE = path.join(__dirname, 'data', 'tasks.json');
+const USERS_FILE = path.join(__dirname, 'data', 'users.json');
 
 app.use(express.json());
 app.use((_, res, next) => {
@@ -41,6 +42,11 @@ app.delete('/api/tasks/:id', (req, res) => {
   const tasks = readTasks().filter(t => t.id != req.params.id);
   writeTasks(tasks);
   res.status(204).send();
+});
+app.get('/api/users', (_, res) => {
+  if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, '[]');
+  const users = JSON.parse(fs.readFileSync(USERS_FILE));
+  res.json(users);
 });
 
 app.listen(PORT, () => console.log(`API running at http://localhost:${PORT}`));

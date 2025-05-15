@@ -1,0 +1,179 @@
+.Uleft-container {
+  width: 20%;
+  min-width: 300px;
+  background-color: var(--bg-left);
+  padding: 2px;
+  height: 100%;
+}
+
+Ubody.light-mode {
+  --text-active-color: #FF0000;
+  --text-inactive-color: #808080;
+  --bg-local-status: #e9e9e9;
+  --bg-combo-list: #fcbaba;
+  --bg-days-left: #adffb9;
+  --bg-volatility-main: #b0a6ff;
+  --bg-per-leg-volatility: hsl(247, 42%, 69%);
+  --bg-mean-volatility: #d2d2d2;
+  --bg-combo-templater: #1e1e1e;
+  --bg-sigma-selector: #a1dcff;
+}
+
+Ubody.dark-mode {
+  --text-active-color: hsl(63, 100%, 58%);
+  --text-inactive-color: #808080;
+  --text-local-color: hsl(0, 90%, 57%);
+  --text-remote-color: #0bff81;
+
+  --bg-local-status: #363535;
+  --bg-combo-list: #770000;
+  --bg-days-left: #02520e;
+  --bg-volatility-main: #0e026f;
+  --bg-per-leg-volatility: #3a2d96;
+  --bg-mean-volatility: #371c00;
+  --bg-combo-templater: #1e1e1e;
+  --bg-sigma-selector: #054f7a;
+}
+
+
+.Ulocal-status-container2,
+.Ucombo-list-container2,
+.Udays-left-container2,
+.Uvolatility-main-container2,
+.Ucombo-templater-container2,
+.Usigma-selector-container2 {
+  background-color: var(--bg-local-status);
+  padding: 10px;
+  border-radius: 5px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.Ucombo-list-container2 {
+  background-color: var(--bg-combo-list);
+}
+
+
+
+.Ucombo-templater-container2 {
+  background-color: var(--bg-combo-templater);
+}
+
+.Uper-leg-volatility-container2,
+.Umean-volatility-container {
+  background-color: var(--bg-mean-volatility);
+  padding: 10px;
+  opacity: 1;
+  height: auto;
+}
+
+.Ucamera-position-container {
+  background-color: rgba(135, 102, 255, 0.459);
+  padding: 10px;
+  border-radius: 5px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* === Checkbox === */
+.Usimple_checkbox {
+  background-color:var(--bg-main);
+  width: 100px;
+}
+
+Uinput[type="checkbox"] {
+  accent-color: #4fc3f7;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* === Textes === */
+.Ucheckbox-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+  display: block;
+  color: var(--text-color);
+}
+
+.Ucheckbox-text-active {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-active-color);
+}
+
+.Ucheckbox-text-inactive {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-inactive-color);
+}
+
+.Utext-remote-mode-active {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-remote-color);
+}
+
+.Utext-local-mode-active {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-local-color);
+}
+
+/* === Containers spéciaux === */
+.Ucontext-container {
+  height: 20%;
+  padding: 5px;
+  background-color: #b8ffe7;
+}
+
+.Ucombo-templates-container {
+  height: 20%;
+  padding: 5px;
+  background-color: #ffc593;
+}
+
+.Uknob-container {
+  height: 20%;
+  padding: 5px;
+  background-color: #eaf494;
+}
+
+/* === Sliders === */
+Uinput[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: linear-gradient(to right, #4fc3f7, #1f222a);
+  border-radius: 4px;
+  outline: none;
+  margin: 6px 0;
+  transition: background 0.3s ease;
+}
+
+Uinput[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #4fc3f7;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 4px #4fc3f7;
+  cursor: pointer;
+}
+
+Uinput[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #4fc3f7;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 4px #4fc3f7;
+  cursor: pointer;
+}
+
+/* === Reverse Slider === */
+.slider-reverse {
+  width: 100%;
+  transform: scaleX(-1);
+}

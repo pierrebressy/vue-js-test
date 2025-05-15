@@ -1,70 +1,178 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import ComboBuilderTab from './ComboBuilderTab';
+import GraphTab from './GraphTab';
+import { cookie_manager } from './cookie';
+import { is_mode_local, load_local_price, load_local_config, fetch_price } from './network.js';
+import { DataManager } from './data_manager.js';
+import './App.css';
+let use_local = false;
+export let ready = false;
+//import './dark_light.css';
+//import './left.css';
 
 function App() {
-  const [tasks, setTasks] = useState([]);
-  const [newTask, setNewTask] = useState('');
 
-  const API = 'http://localhost:3001/api/tasks';
+  const [dataManager, setDataManager] = useState(null);
 
-  const fetchTasks = async () => {
-    const res = await fetch(API);
-    const data = await res.json();
-    setTasks(data);
-  };
+  function set_dark_mode(value) {
+    cookie_manager.set_cookie("display_mode", value ? "DARK" : "LIGHT", 365);
+  }
+  function get_dark_mode() {
+    let mode = cookie_manager.get_cookie("display_mode");
+    if (mode !== "DARK" && mode !== "LIGHT") {
+      mode = "DARK";
+      set_dark_mode(true);
+    }
+    return mode;
+  }
 
-  const addTask = async () => {
-    if (!newTask.trim()) return;
-    const res = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: newTask })
-    });
-    const task = await res.json();
-    setTasks(prev => [...prev, task]);
-    setNewTask('');
-  };
+  function set_last_main_tab(tab_name) {
+    cookie_manager.set_cookie("last_main_tab", tab_name, 365);
+    let mode = cookie_manager.get_cookie("last_main_tab");
+    //console.log("[set_last_main_tab]", mode);
+  }
+  function get_last_main_tab() {
+    let mode = cookie_manager.get_cookie("last_main_tab");
+    //console.log("[get_last_main_tab]", mode);
+    if (mode === null) {
+      mode = 'graph';
+      set_last_main_tab(mode);
+    }
+    return mode;
+  }
 
-  const toggleTask = async (id) => {
-    const res = await fetch(`${API}/${id}`, { method: 'PUT' });
-    const updated = await res.json();
-    setTasks(tasks.map(t => (t.id === id ? updated : t)));
-  };
+  function set_use_local(value) {
+    use_local = value;
+  }
+  function get_use_local() {
+    return use_local;
+  }
 
-  const deleteTask = async (id) => {
-    await fetch(`${API}/${id}`, { method: 'DELETE' });
-    setTasks(tasks.filter(t => t.id !== id));
-  };
+  const [darkMode, setDarkMode] = useState(get_dark_mode() === "DARK"); // or false for light mode
+  useEffect(() => {
+    if (darkMode) {
+      set_dark_mode(true);
+      document.body.classList.add("dark-mode");
+      document.body.classList.remove("light-mode");
+    } else {
+      set_dark_mode(false);
+      document.body.classList.add("light-mode");
+      document.body.classList.remove("dark-mode");
+    }
+  }, [darkMode]);
 
-  useEffect(() => { fetchTasks(); }, []);
+  const [activeTab, setActiveTab] = useState(get_last_main_tab());
+  useEffect(() => {
+    set_last_main_tab(activeTab);
+  }, [activeTab]);
+
+  const tabs = [
+    // { id: 'graph', label: '📈 Graphs', content: <GraphTab data={dataManager} /> },
+      {
+    id: 'graph',
+    label: '📈 Graphs',
+    content: dataManager
+      ? <GraphTab dataManager={dataManager} />
+      : <div>Loading chart...</div>
+  },
+
+     { id: 'combo-builder', label: '🧾 Combo Builder', content: <ComboBuilderTab /> },
+     { id: 'combo-finder', label: '🔍 Combo Finder', content: <GraphTab /> },
+     { id: 'parameters', label: '⚙️ Parameters', content: <GraphTab /> },
+     { id: 'log', label: '🖥️ Log', content: <GraphTab /> }
+   ];
+
+
+  //global_data = new DataManager(get_use_local())
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // force local config file to be loaded in localStorage
+        if (1) {
+          let config_tmp = await load_local_config();
+          localStorage.setItem('config', JSON.stringify(config_tmp));
+          console.log("[loadData] force local config file to be loaded in localStorage");
+        }
+      } catch (err) {
+        console.error('force local config file to be loaded in localStorage:', err);
+      } finally {
+        console.log("[loadData] local config file to be loaded in localStorage:");
+      }
+
+      let config;
+      try {
+        //set_use_local(await is_mode_local());
+        set_use_local(true);
+        console.log("get_use_local:", get_use_local());
+        config = await load_local_config();
+      } catch (err) {
+        console.error('Failed to load config:', err);
+      } finally {
+        console.log("Config loaded:", config);
+      }
+
+      const instance = new DataManager(true);
+      try {
+        const load = async () => {
+          console.log('Loading...');
+          console.log(instance);
+          await instance.setup(true); // optional if DataManager is async
+          setDataManager(instance);
+          console.log('Loaded.');
+        };
+        load();
+      } catch (err) {
+        console.error('Failed to setup datamanager:', err);
+      } finally {
+      }
+
+    };
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    if (dataManager) {
+      console.log('[useEffect] dataManager is now ready:', dataManager);
+    }
+  }, [dataManager]);
+
+
 
   return (
-    <div style={{ maxWidth: 400, margin: '40px auto', fontFamily: 'Arial' }}>
-      <h2>To-Do List (React + API)</h2>
-      <input
-        value={newTask}
-        onChange={e => setNewTask(e.target.value)}
-        onKeyDown={e => e.key === 'Enter' && addTask()}
-        placeholder="Add a new task..."
-        style={{ width: '100%', padding: '10px' }}
-      />
-      <ul style={{ listStyle: 'none', padding: 0 }}>
-        {tasks.map(task => (
-          <li key={task.id} style={{
-            background: '#eee',
-            padding: '10px',
-            margin: '5px 0',
-            textDecoration: task.done ? 'line-through' : '',
-            display: 'flex', justifyContent: 'space-between'
-          }}>
-            <span onClick={() => toggleTask(task.id)} style={{ cursor: 'pointer' }}>
-              {task.text}
-            </span>
-            <button onClick={() => deleteTask(task.id)}>🗑</button>
-          </li>
+    <div className="top-container">
+      <button
+        onClick={() => setDarkMode(prev => !prev)}
+        style={{
+          padding: '8px 16px',
+          borderRadius: '6px',
+          backgroundColor: darkMode ? '#333' : '#ddd',
+          color: darkMode ? '#fff' : '#000',
+          border: '1px solid #999',
+          cursor: 'pointer',
+          marginTop: '10px'
+        }}
+      >
+        {darkMode ? '🌙 Dark Mode' : '☀️ Light Mode'}
+      </button>
+      <div className="main-tabs-container">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            className={`tab ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
         ))}
-      </ul>
+      </div>
+      <div className="main-tab-container">
+        {tabs.find(tab => tab.id === activeTab)?.content}
+      </div>
     </div>
   );
+
+
 }
 
 export default App;
