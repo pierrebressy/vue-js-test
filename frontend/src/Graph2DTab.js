@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useMemo } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
@@ -32,8 +32,9 @@ ChartJS.unregister({
  });
 */
 
-
-function createMultiDraggableLabelPlugin(xRefs, chartRef) {
+/*
+function createMultiDraggableLabelPlugin_old(xRefs, myLabelMap, chartRef) {
+    console.log("🚨 createMultiDraggableLabelPlugin", xRefs);
     return {
         id: 'multiDraggableLabel',
         afterDraw(chart) {
@@ -73,6 +74,14 @@ function createMultiDraggableLabelPlugin(xRefs, chartRef) {
                 const boxX = xPixel - boxWidth / 2;
                 const boxY = yPixel;
 
+                if (labelId.startsWith('leg')) {
+                    ctx.fillStyle = 'green';
+                } else if (labelId === 'underlying') {
+                    ctx.fillStyle = 'red';
+                } else {
+                    ctx.fillStyle = 'blue';
+                }
+
                 ctx.fillStyle = index === 0 ? 'blue' : 'red';
                 ctx.beginPath();
                 ctx.roundRect?.(boxX, boxY, boxWidth, boxHeight, 4);
@@ -89,6 +98,75 @@ function createMultiDraggableLabelPlugin(xRefs, chartRef) {
         }
     };
 }
+*/
+
+function createMultiDraggableLabelPlugin( myLabelMap, chartRef) {
+    return {
+        id: 'multiDraggableLabel',
+        afterDraw(chart) {
+            //if (!chartRef?.current || chart.canvas !== chartRef.current) return;
+            const { ctx, chartArea, scales } = chart;
+            if (!chartArea || !scales?.x || !scales?.y) return;
+
+            const fontSize = 12;
+            const padding = 6;
+            const fontFamily = 'Menlo, monospace';
+
+            chart._labelBoxes = {}; // Store boxes per label
+            let labelId = 0;
+            myLabelMap.current.forEach(({ label, xRef }) => {
+                //console.log(`🚨  ${label} → x = ${xRef.current}`);
+
+                const xValue = xRef.current;
+                const xPixel = scales.x.getPixelForValue(xValue);
+                let color = 'blue';
+                if (label.startsWith('leg')) {
+                    color = 'green';
+                } else if (label === 'underlying') {
+                    color = 'red';
+                } else {
+                    color = 'blue';
+                }
+                // 🔵 Vertical line
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(xPixel, chartArea.top);
+                ctx.lineTo(xPixel, chartArea.bottom);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1;
+                ctx.setLineDash([]);
+                ctx.stroke();
+                ctx.restore();
+
+                // 🟦 Label box
+                const yPixel = chartArea.top + 10;//+ index * 30;
+                const text = xValue.toFixed(1);
+                ctx.save();
+                ctx.font = `${fontSize}px ${fontFamily}`;
+                const textWidth = ctx.measureText(text).width;
+                const boxWidth = textWidth + padding * 2;
+                const boxHeight = fontSize + padding;
+                const boxX = xPixel - boxWidth / 2;
+                const boxY = yPixel;
+
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.roundRect?.(boxX, boxY, boxWidth, boxHeight, 4);
+                ctx.fill();
+
+                ctx.fillStyle = 'white';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(text, xPixel, boxY + boxHeight / 2);
+                ctx.restore();
+                chart._labelBoxes[labelId] = { x: boxX, y: boxY, width: boxWidth, height: boxHeight };
+                labelId++;
+
+            });
+
+        }
+    };
+}
 
 
 export default function Graph2DTab({ dataManager, days_left, mean_volatility }) {
@@ -96,37 +174,82 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
     const chartRefPL = useRef(null);
     const chartRefGreek = useRef(null);
     const legRefs = useRef([]); // stores refs to x positions
-
+    const [redraw, setRedraw] = React.useState(false);
     const xRef1 = useRef(160);
-    const xRef2 = useRef(200);
+    const xRef2 = useRef(210);
     const draggingLabel = useRef(null); // 'label1' or 'label2' or null
-
+    const myLabelMap = useRef([]);
+    /*
     const pluginDraggable = useMemo(
         () => createMultiDraggableLabelPlugin({ label1: xRef1, label2: xRef2 }, chartRefPL),
         []
     );
+    */
+
+    const pluginDraggable = useMemo(
+        () => {
+            const legs = dataManager.get_combo_params().legs;
+            //console.log("➜ pluginDraggable: legs.length=", legs.length);
+
+            myLabelMap.current = [];
+            myLabelMap.current.push({ label: 'label1', xRef: xRef1 });
+            myLabelMap.current.push({ label: 'label2', xRef: xRef2 });
+            legs.forEach((_, index) => {
+                myLabelMap.current.push({ label: `leg${index + 1}`, xRef: { current: legs[index].strike } });
+            });
+            //console.log("‼️ myLabelMap=", myLabelMap);
+
+            return createMultiDraggableLabelPlugin( myLabelMap, chartRefPL)
+        },
+        [dataManager]
+    );
+
+
+    /*
+const pluginDraggableMulti = useMemo(() => {
+    if (!dataManager || !legRefs.current.length) return undefined;
+
+    const legs = dataManager.get_combo_params().legs;
+    //console.log("➜ pluginDraggableMulti: legs.length=", legs.length);
+
+    const labelMap = {};
+    let index = 0;
+    legs.forEach((_, index) => {
+        labelMap[`leg${index + 1}`] = legRefs.current[index];
+    });
+    labelMap[`underlying`] = { current: 200 };
+    labelMap[`ref`] = { current: 188.88 };
+
+    //console.log(" 🟢labelMap", labelMap);
+    return createMultiDraggableLabelPlugin(labelMap, chartRefPL);
+}, [dataManager, legRefs.current.length]);
+
+*/
+    /*
+        useEffect(() => {
+            if (dataManager) {
+                console.log('[Graph2DTab] DataManager is ready:', dataManager);
+                // Build chart here
+            }
+        }, [dataManager]);
+        */
+    /*
+        useEffect(() => {
+            if (!dataManager) return;
+    
+            const legs = dataManager.get_combo_params().legs;
+            legRefs.current = legs.map((leg) => {
+                const ref = { current: leg.strike };
+                return ref;
+            });
+        }, [dataManager, legRefs.current.length]);
+    */
 
     useEffect(() => {
-        if (dataManager) {
-            console.log('[Graph2DTab] DataManager is ready:', dataManager);
-            // Build chart here
-        }
-    }, [dataManager]);
-
-useEffect(() => {
-  if (!dataManager) return;
-
-  const legs = dataManager.get_combo_params().legs;
-  legRefs.current = legs.map((leg) => {
-    const ref = { current: leg.strike };
-    return ref;
-  });
-}, [dataManager]);
-
-
-    useEffect(() => {
+        //console.log(dataManager);
         compute_data_to_display(dataManager, false);
-    }, [days_left, mean_volatility, dataManager]);
+        setRedraw(false);
+    }, [days_left, mean_volatility, dataManager, redraw]);
 
     useEffect(() => {
         const chart = chartRefPL.current;
@@ -143,7 +266,9 @@ useEffect(() => {
 
         const onMouseDown = (e) => {
             const pos = getMouse(e);
+            //console.log("🟢 onMouseDown", pos);
             const boxes = chart._labelBoxes || {};
+            //console.log("🟢 [onMouseDown] boxes=", boxes);
             for (const [labelId, box] of Object.entries(boxes)) {
                 if (
                     pos.x >= box.x &&
@@ -152,6 +277,7 @@ useEffect(() => {
                     pos.y <= box.y + box.height
                 ) {
                     draggingLabel.current = labelId;
+                    //console.log("🟢 [onMouseDown] ", labelId, myLabelMap.current[labelId].label, myLabelMap.current[labelId].xRef.current);
                     e.preventDefault();
                     break;
                 }
@@ -164,14 +290,39 @@ useEffect(() => {
             const scale = chart.scales.x;
             const xVal = scale.getValueForPixel(pos.x);
 
-            if (draggingLabel.current === 'label1') xRef1.current = xVal;
-            if (draggingLabel.current === 'label2') xRef2.current = xVal;
+            if (myLabelMap.current[draggingLabel.current].label === 'label1') { 
+                xRef1.current = xVal;
+                //console.log("🟠 label1", xVal);
+            }
+            if (myLabelMap.current[draggingLabel.current].label === 'label2') xRef2.current = xVal;
+            
+            
+            
+            
+            
+            
+            
+            
+            if (myLabelMap.current[draggingLabel.current].label === 'leg1') {
+                let option = dataManager.get_combo_params().legs[0];
+                option.strike = xVal;
+                myLabelMap.current[draggingLabel.current].xRef.current = xVal;
+                //console.log("🟠 option", dataManager.get_combo_params().legs[0].strike);
+            }
+            if (myLabelMap.current[draggingLabel.current].label === 'leg2') {
+                let option = dataManager.get_combo_params().legs[1];
+                option.strike = xVal;
+                myLabelMap.current[draggingLabel.current].xRef.current = xVal;
+                //console.log("🟠 option", dataManager);
+                setRedraw(true);
+            }
 
             chart.update('none');
             e.preventDefault();
         };
 
         const onMouseUp = () => {
+            //console.log("🔴 onMouseUp", draggingLabel.current);
             draggingLabel.current = null;
         };
 
@@ -186,15 +337,26 @@ useEffect(() => {
         };
     }, []);
 
+    /*
+        useEffect(() => {
+            if (!dataManager) return;
+    
+            dataManager.get_combo_params().legs.forEach(option => {
+                xRef2.current = option.strike;
+            });
+    
+        }, [dataManager]);
+    */
+    /*
+        useEffect(() => {
+            if (!dataManager) return;
+    
+            const legs = dataManager.get_combo_params().legs;
+            legRefs.current = legs.map((leg) => ({ current: leg.strike }));
+            console.log("legRefs", legRefs.current);
+        }, [dataManager]);
+    */
 
-    useEffect(() => {
-        if (!dataManager) return;
-
-        dataManager.get_combo_params().legs.forEach(option => {
-            xRef2.current = option.strike;
-        });
-
-    }, [dataManager]);
 
     if (!dataManager) return <div>Loading chart...</div>;
 
@@ -428,7 +590,8 @@ useEffect(() => {
                     ref={chartRefPL}
                     data={chartPL}
                     options={chartOptionsPL}
-                    plugins={[pluginDraggable]} // ✅ Only here
+                    //plugins={pluginDraggableMulti ? [pluginDraggableMulti] : []} // ✅ Only here
+                    plugins={pluginDraggable ? [pluginDraggable] : []} // ✅ Only here
                 />
             </div>
             {chartGreeksIndexes.map(i => (
