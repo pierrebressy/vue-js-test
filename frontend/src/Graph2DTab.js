@@ -25,7 +25,7 @@ ChartJS.register(
     Tooltip,
     Legend);
 
-function createLegLinesPlugin(legs) {
+function createLegLinesPlugin_still(legs) {
     return {
         id: 'legLines',
         afterDraw(chart) {
@@ -75,17 +75,138 @@ function createLegLinesPlugin(legs) {
         }
     };
 }
+function createLegLinesPlugin(dataManager, labelRefs) {
+    return {
+        id: 'legLines',
+        afterDraw(chart) {
+            const { ctx, chartArea, scales } = chart;
+            if (!chartArea || !scales?.x || !scales?.y) return;
+
+            const fontSize = 12;
+            const padding = 6;
+            const fontFamily = 'Menlo, monospace';
+            chart._labelBoxes = {};
+
+            labelRefs.current.forEach((ref, i) => {
+                const xValue = ref.current;
+                const xPixel = scales.x.getPixelForValue(xValue);
+
+                // Draw line
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(xPixel, chartArea.top);
+                ctx.lineTo(xPixel, chartArea.bottom);
+                ctx.strokeStyle = 'blue';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.restore();
+
+                // Draw label
+                const label = xValue.toFixed(1);
+                ctx.save();
+                ctx.font = `${fontSize}px ${fontFamily}`;
+                const textWidth = ctx.measureText(label).width;
+                const boxWidth = textWidth + padding * 2;
+                const boxHeight = fontSize + padding;
+                const boxX = xPixel - boxWidth / 2;
+                const boxY = chartArea.top + 10 + i * 20;
+
+                ctx.fillStyle = 'blue';
+                ctx.beginPath();
+                ctx.roundRect?.(boxX, boxY, boxWidth, boxHeight, 4);
+                ctx.fill();
+
+                ctx.fillStyle = 'white';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(label, xPixel, boxY + boxHeight / 2);
+                ctx.restore();
+
+                chart._labelBoxes[i] = { x: boxX, y: boxY, width: boxWidth, height: boxHeight };
+            });
+        }
+    };
+}
 
 export default function Graph2DTab({ dataManager }) {
 
     const chartRefPL = useRef(null);
     const chartRefGreek = useRef(null);
 
+    const labelRefs = useRef([]);
+    const draggingLabel = useRef(null);
+
+    useEffect(() => {
+        if (!dataManager) return;
+        const legs = dataManager.get_combo_params().legs;
+        labelRefs.current = legs.map(leg => ({ current: leg.strike }));
+    }, [dataManager]);
+/*
     const legLinesPlugin = useMemo(() => {
         if (!dataManager) return null;
         const legs = dataManager.get_combo_params().legs;
         return createLegLinesPlugin(legs);
     }, [dataManager]);
+*/
+
+  useEffect(() => {
+    const chart = chartRefPL.current;
+    if (!chart) return;
+    const canvas = chart.canvas;
+
+    const getMouse = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    };
+
+    const onMouseDown = (e) => {
+      const pos = getMouse(e);
+      const boxes = chart._labelBoxes || {};
+      for (const [index, box] of Object.entries(boxes)) {
+        if (
+          pos.x >= box.x &&
+          pos.x <= box.x + box.width &&
+          pos.y >= box.y &&
+          pos.y <= box.y + box.height
+        ) {
+          draggingLabel.current = parseInt(index);
+          e.preventDefault();
+          break;
+        }
+      }
+    };
+
+    const onMouseMove = (e) => {
+      if (draggingLabel.current == null) return;
+      const pos = getMouse(e);
+      const scale = chart.scales.x;
+      const xVal = scale.getValueForPixel(pos.x);
+
+      labelRefs.current[draggingLabel.current].current = xVal;
+      dataManager.get_combo_params().legs[draggingLabel.current].strike = xVal;
+      chart.update('none');
+      e.preventDefault();
+    };
+
+    const onMouseUp = () => {
+      draggingLabel.current = null;
+    };
+
+    canvas.addEventListener('mousedown', onMouseDown);
+    canvas.addEventListener('mousemove', onMouseMove);
+    canvas.addEventListener('mouseup', onMouseUp);
+
+    return () => {
+      canvas.removeEventListener('mousedown', onMouseDown);
+      canvas.removeEventListener('mousemove', onMouseMove);
+      canvas.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [dataManager]);
+
+
 
 
     useEffect(() => {
@@ -93,7 +214,6 @@ export default function Graph2DTab({ dataManager }) {
     }, [dataManager]);
 
 
-    if (!dataManager) return <div>Loading chart...</div>;
 
     dataManager.set_underlying_price(180.0);
 
@@ -270,6 +390,10 @@ export default function Graph2DTab({ dataManager }) {
             ]
         });
     }
+
+  const legLinesPlugin = useMemo(() => createLegLinesPlugin(dataManager, labelRefs), [dataManager]);
+
+    if (!dataManager) return <div>Loading chart...</div>;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '4px' }}>
