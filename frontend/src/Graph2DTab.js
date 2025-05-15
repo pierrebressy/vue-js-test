@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
@@ -25,15 +25,86 @@ ChartJS.register(
     Tooltip,
     Legend);
 
+/* 
+ChartJS.unregister({
+     id: 'crosshair',
+     beforeEvent: () => { }
+ });
+*/
 
 
+function createMultiDraggableLabelPlugin(xRefs, chartRef) {
+    return {
+        id: 'multiDraggableLabel',
+        afterDraw(chart) {
+            //if (!chartRef?.current || chart.canvas !== chartRef.current) return;
+            const { ctx, chartArea, scales } = chart;
+            if (!chartArea || !scales?.x || !scales?.y) return;
+
+            const fontSize = 12;
+            const padding = 6;
+            const fontFamily = 'Menlo, monospace';
+
+            chart._labelBoxes = {}; // Store boxes per label
+
+            Object.entries(xRefs).forEach(([labelId, xRef], index) => {
+                const xValue = xRef.current;
+                const xPixel = scales.x.getPixelForValue(xValue);
+
+                // 🔵 Vertical line
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(xPixel, chartArea.top);
+                ctx.lineTo(xPixel, chartArea.bottom);
+                ctx.strokeStyle = index === 0 ? 'blue' : 'red';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([]);
+                ctx.stroke();
+                ctx.restore();
+
+                // 🟦 Label box
+                const yPixel = chartArea.top + 10;//+ index * 30;
+                const label = xValue.toFixed(1);
+                ctx.save();
+                ctx.font = `${fontSize}px ${fontFamily}`;
+                const textWidth = ctx.measureText(label).width;
+                const boxWidth = textWidth + padding * 2;
+                const boxHeight = fontSize + padding;
+                const boxX = xPixel - boxWidth / 2;
+                const boxY = yPixel;
+
+                ctx.fillStyle = index === 0 ? 'blue' : 'red';
+                ctx.beginPath();
+                ctx.roundRect?.(boxX, boxY, boxWidth, boxHeight, 4);
+                ctx.fill();
+
+                ctx.fillStyle = 'white';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(label, xPixel, boxY + boxHeight / 2);
+                ctx.restore();
+
+                chart._labelBoxes[labelId] = { x: boxX, y: boxY, width: boxWidth, height: boxHeight };
+            });
+        }
+    };
+}
 
 
 export default function Graph2DTab({ dataManager, days_left, mean_volatility }) {
 
     const chartRefPL = useRef(null);
     const chartRefGreek = useRef(null);
-    const xRef = useRef(200);         // 🔁 x position du label
+    const legRefs = useRef([]); // stores refs to x positions
+
+    const xRef1 = useRef(160);
+    const xRef2 = useRef(200);
+    const draggingLabel = useRef(null); // 'label1' or 'label2' or null
+
+    const pluginDraggable = useMemo(
+        () => createMultiDraggableLabelPlugin({ label1: xRef1, label2: xRef2 }, chartRefPL),
+        []
+    );
 
     useEffect(() => {
         if (dataManager) {
@@ -42,9 +113,88 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
         }
     }, [dataManager]);
 
+useEffect(() => {
+  if (!dataManager) return;
+
+  const legs = dataManager.get_combo_params().legs;
+  legRefs.current = legs.map((leg) => {
+    const ref = { current: leg.strike };
+    return ref;
+  });
+}, [dataManager]);
+
+
     useEffect(() => {
         compute_data_to_display(dataManager, false);
     }, [days_left, mean_volatility, dataManager]);
+
+    useEffect(() => {
+        const chart = chartRefPL.current;
+        if (!chart) return;
+        const canvas = chart.canvas;
+
+        const getMouse = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        };
+
+        const onMouseDown = (e) => {
+            const pos = getMouse(e);
+            const boxes = chart._labelBoxes || {};
+            for (const [labelId, box] of Object.entries(boxes)) {
+                if (
+                    pos.x >= box.x &&
+                    pos.x <= box.x + box.width &&
+                    pos.y >= box.y &&
+                    pos.y <= box.y + box.height
+                ) {
+                    draggingLabel.current = labelId;
+                    e.preventDefault();
+                    break;
+                }
+            }
+        };
+
+        const onMouseMove = (e) => {
+            if (!draggingLabel.current) return;
+            const pos = getMouse(e);
+            const scale = chart.scales.x;
+            const xVal = scale.getValueForPixel(pos.x);
+
+            if (draggingLabel.current === 'label1') xRef1.current = xVal;
+            if (draggingLabel.current === 'label2') xRef2.current = xVal;
+
+            chart.update('none');
+            e.preventDefault();
+        };
+
+        const onMouseUp = () => {
+            draggingLabel.current = null;
+        };
+
+        canvas.addEventListener('mousedown', onMouseDown);
+        canvas.addEventListener('mousemove', onMouseMove);
+        canvas.addEventListener('mouseup', onMouseUp);
+
+        return () => {
+            canvas.removeEventListener('mousedown', onMouseDown);
+            canvas.removeEventListener('mousemove', onMouseMove);
+            canvas.removeEventListener('mouseup', onMouseUp);
+        };
+    }, []);
+
+
+    useEffect(() => {
+        if (!dataManager) return;
+
+        dataManager.get_combo_params().legs.forEach(option => {
+            xRef2.current = option.strike;
+        });
+
+    }, [dataManager]);
 
     if (!dataManager) return <div>Loading chart...</div>;
 
@@ -271,15 +421,15 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
         });
     }
 
-    ChartJS.unregister({
-        id: 'crosshair',
-        beforeEvent: () => { }
-    });
-
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '4px' }}>
             <div style={{ flex: 6, display: 'flex' }}>
-                <Line ref={chartRefPL} data={chartPL} options={chartOptionsPL} />
+                <Line
+                    ref={chartRefPL}
+                    data={chartPL}
+                    options={chartOptionsPL}
+                    plugins={[pluginDraggable]} // ✅ Only here
+                />
             </div>
             {chartGreeksIndexes.map(i => (
                 <div key={i} style={{ flex: 1, display: 'flex' }}>
