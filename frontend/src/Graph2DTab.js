@@ -25,56 +25,6 @@ ChartJS.register(
     Tooltip,
     Legend);
 
-function createLegLinesPlugin_still(legs) {
-    return {
-        id: 'legLines',
-        afterDraw(chart) {
-            const { ctx, chartArea, scales } = chart;
-            if (!chartArea || !scales?.x || !scales?.y) return;
-
-            const fontSize = 12;
-            const padding = 4;
-            const fontFamily = 'Menlo, monospace';
-
-            legs.forEach((leg) => {
-                const xVal = leg.strike;
-                const xPixel = scales.x.getPixelForValue(xVal);
-
-                // 🔵 Vertical Line
-                ctx.save();
-                ctx.beginPath();
-                ctx.moveTo(xPixel, chartArea.top);
-                ctx.lineTo(xPixel, chartArea.bottom);
-                ctx.strokeStyle = 'blue';
-                ctx.lineWidth = 1;
-                ctx.setLineDash([]);
-                ctx.stroke();
-                ctx.restore();
-
-                // 🟦 Label
-                const label = xVal.toFixed(1);
-                ctx.save();
-                ctx.font = `${fontSize}px ${fontFamily}`;
-                const textWidth = ctx.measureText(label).width;
-                const boxWidth = textWidth + padding * 2;
-                const boxHeight = fontSize + padding;
-                const boxX = xPixel - boxWidth / 2;
-                const boxY = chartArea.top + 5;
-
-                ctx.fillStyle = 'blue';
-                ctx.beginPath();
-                ctx.roundRect?.(boxX, boxY, boxWidth, boxHeight, 4);
-                ctx.fill();
-
-                ctx.fillStyle = 'white';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(label, xPixel, boxY + boxHeight / 2);
-                ctx.restore();
-            });
-        }
-    };
-}
 function createLegLinesPlugin(dataManager, labelRefs) {
     return {
         id: 'legLines',
@@ -91,18 +41,22 @@ function createLegLinesPlugin(dataManager, labelRefs) {
                 const xValue = ref.current;
                 const xPixel = scales.x.getPixelForValue(xValue);
 
+                const leg = dataManager.get_combo_params().legs[i];
+                const color = leg.type === 'put' ? 'green' : 'red';
+                const type = leg.type === 'put' ? 'P' : 'C';
+
                 // Draw line
                 ctx.save();
                 ctx.beginPath();
                 ctx.moveTo(xPixel, chartArea.top);
                 ctx.lineTo(xPixel, chartArea.bottom);
-                ctx.strokeStyle = 'blue';
+                ctx.strokeStyle = color;
                 ctx.lineWidth = 1;
                 ctx.stroke();
                 ctx.restore();
 
                 // Draw label
-                const label = xValue.toFixed(1);
+                const label = `${leg.qty} ${type} ${xValue.toFixed(1)}`;
                 ctx.save();
                 ctx.font = `${fontSize}px ${fontFamily}`;
                 const textWidth = ctx.measureText(label).width;
@@ -111,7 +65,7 @@ function createLegLinesPlugin(dataManager, labelRefs) {
                 const boxX = xPixel - boxWidth / 2;
                 const boxY = chartArea.top + 10 + i * 20;
 
-                ctx.fillStyle = 'blue';
+                ctx.fillStyle = color;
                 ctx.beginPath();
                 ctx.roundRect?.(boxX, boxY, boxWidth, boxHeight, 4);
                 ctx.fill();
@@ -181,17 +135,6 @@ export default function Graph2DTab({ dataManager }) {
             }
         };
 
-        /*        const onMouseMove = (e) => {
-                    if (draggingLabel.current == null) return;
-                    const pos = getMouse(e);
-                    const scale = chart.scales.x;
-                    const xVal = scale.getValueForPixel(pos.x);
-        
-                    labelRefs.current[draggingLabel.current].current = xVal;
-                    dataManager.get_combo_params().legs[draggingLabel.current].strike = xVal;
-                    chart.update('none');
-                    e.preventDefault();
-                };*/
         const onMouseMove = (e) => {
             if (draggingLabel.current == null) return;
             const pos = getMouse(e);

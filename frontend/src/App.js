@@ -68,26 +68,29 @@ function App() {
 
   const tabs = [
     // { id: 'graph', label: '📈 Graphs', content: <GraphTab data={dataManager} /> },
-      {
-    id: 'graph',
-    label: '📈 Graphs',
-    content: dataManager
-      ? <GraphTab dataManager={dataManager} />
-      : <div>Loading chart...</div>
-  },
+    {
+      id: 'graph',
+      label: '📈 Graphs',
+      content: dataManager
+        ? <GraphTab dataManager={dataManager} />
+        : <div>Loading chart...</div>
+    },
 
-     { id: 'combo-builder', label: '🧾 Combo Builder', content: <ComboBuilderTab /> },
-     { id: 'combo-finder', label: '🔍 Combo Finder', content: <GraphTab /> },
-     { id: 'parameters', label: '⚙️ Parameters', content: <GraphTab /> },
-     { id: 'log', label: '🖥️ Log', content: <GraphTab /> }
-   ];
+    { id: 'combo-builder', label: '🧾 Combo Builder', content: <ComboBuilderTab /> },
+    { id: 'combo-finder', label: '🔍 Combo Finder', content: <GraphTab /> },
+    { id: 'parameters', label: '⚙️ Parameters', content: <GraphTab /> },
+    { id: 'log', label: '🖥️ Log', content: <GraphTab /> }
+  ];
 
 
-  //global_data = new DataManager(get_use_local())
 
   useEffect(() => {
     const loadData = async () => {
       try {
+        // force reset main tab to graph
+        if (0) {
+          set_last_main_tab('graph')
+        }
         // force local config file to be loaded in localStorage
         if (1) {
           let config_tmp = await load_local_config();
