@@ -1,7 +1,5 @@
 import React, { useRef, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
-//import zoomPlugin from 'chartjs-plugin-zoom';
-//import crosshairPlugin from 'chartjs-plugin-crosshair';
 import {
     Chart as ChartJS,
     LineElement,
@@ -14,98 +12,8 @@ import {
     Legend
 } from 'chart.js';
 
-//import { combo_options, initial_legs, sigma_factors } from './consts';
-
 import { compute_data_to_display } from './computation.js';
-/*
-const labelPlugin = {
-    id: 'customLabel',
-    afterDraw(chart) {
-        const { ctx, chartArea, scales } = chart;
-        if (!chartArea || !scales?.x || !scales?.y) return;
 
-        const xValue = 190;
-        const xPixel = scales.x.getPixelForValue(xValue);
-        const yPixel = chartArea.top + 10; // un peu en dessous du top
-
-        const label = xValue.toString();
-        const padding = 6;
-        const fontSize = 12;
-        const fontFamily = 'Menlo, monospace';
-
-        ctx.save();
-        ctx.font = `${fontSize}px ${fontFamily}`;
-        const textWidth = ctx.measureText(label).width;
-
-        const boxWidth = textWidth + padding * 2;
-        const boxHeight = fontSize + padding;
-
-        const boxX = xPixel - boxWidth / 2;
-        const boxY = yPixel;
-
-        // Rectangle bleu arrondi
-        ctx.fillStyle = 'blue';
-        ctx.strokeStyle = 'blue';
-        ctx.beginPath();
-        ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 4);
-        ctx.fill();
-
-        // Texte blanc centré
-        ctx.fillStyle = 'white';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(label, xPixel, boxY + boxHeight / 2);
-
-        ctx.restore();
-    }
-};
-*/
-/*
-function createDraggableLabelPlugin(xRef, chartRef) {
-    return {
-        id: 'draggableLabel',
-        afterDraw(chart) {
-            if (!chartRef?.current || chart.canvas !== chartRef.current) return;
-            const { ctx, chartArea, scales } = chart;
-            if (!chartArea || !scales?.x || !scales?.y) return;
-
-            const xValue = xRef.current;
-            const xPixel = scales.x.getPixelForValue(xValue);
-            const yPixel = chartArea.top + 10;
-
-            const label = xValue.toFixed(1);
-            const fontSize = 12;
-            const padding = 6;
-            const fontFamily = 'Menlo, monospace';
-
-            ctx.save();
-            ctx.font = `${fontSize}px ${fontFamily}`;
-            const textWidth = ctx.measureText(label).width;
-            const boxWidth = textWidth + padding * 2;
-            const boxHeight = fontSize + padding;
-            const boxX = xPixel - boxWidth / 2;
-            const boxY = yPixel;
-
-            ctx.fillStyle = 'blue';
-            ctx.beginPath();
-            if (ctx.roundRect) {
-                ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 4);
-            } else {
-                ctx.rect(boxX, boxY, boxWidth, boxHeight);
-            }
-            ctx.fill();
-
-            ctx.fillStyle = 'white';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(label, xPixel, boxY + boxHeight / 2);
-            ctx.restore();
-
-            chart._labelBox = { x: boxX, y: boxY, width: boxWidth, height: boxHeight };
-        }
-    };
-}
-*/
 // Register Chart.js components and plugins
 ChartJS.register(
     LineElement,
@@ -126,10 +34,6 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
     const chartRefPL = useRef(null);
     const chartRefGreek = useRef(null);
     const xRef = useRef(200);         // 🔁 x position du label
-    //const draggingRef = useRef(false);
-
-    //const [size, setSize] = useState({ width: 0, height: 0 });
-
 
     useEffect(() => {
         if (dataManager) {
@@ -138,87 +42,11 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
         }
     }, [dataManager]);
 
-    /*
-    useEffect(() => {
-        const element = chartContainerRef.current;
-        if (!element) return;
-
-        const observer = new ResizeObserver(entries => {
-            for (let entry of entries) {
-                const { width, height } = entry.contentRect;
-                setSize({ width: Math.round(width), height: Math.round(height) });
-            }
-        });
-
-        observer.observe(element);
-
-        return () => observer.disconnect();
-    }, []);
-*/
     useEffect(() => {
         compute_data_to_display(dataManager, false);
     }, [days_left, mean_volatility, dataManager]);
-/*
-    useEffect(() => {
-        const plugin = createDraggableLabelPlugin(xRef, draggingRef);
-        ChartJS.register(plugin);
-
-        return () => ChartJS.unregister(plugin);
-    }, []);
-*/
-    useEffect(() => {
-        const chart = chartRefPL.current;
-        if (!chart) return;
-        const canvas = chart.canvas;
-
-        const getMouse = (e) => {
-            const rect = canvas.getBoundingClientRect();
-            return {
-                x: e.clientX - rect.left,
-                y: e.clientY - rect.top
-            };
-        };
-
-        const onMouseDown = (e) => {
-            const pos = getMouse(e);
-            const box = chart._labelBox;
-            if (!box) return;
-            if (
-                pos.x >= box.x && pos.x <= box.x + box.width &&
-                pos.y >= box.y && pos.y <= box.y + box.height
-            ) {
-                canvas.dataset.dragging = 'true';
-            }
-        };
-
-        const onMouseMove = (e) => {
-            if (canvas.dataset.dragging !== 'true') return;
-            const pos = getMouse(e);
-            const scale = chart.scales.x;
-            xRef.current = scale.getValueForPixel(pos.x);
-            chart.update('none');
-        };
-
-        const onMouseUp = () => {
-            canvas.dataset.dragging = 'false';
-        };
-
-        canvas.addEventListener('mousedown', onMouseDown);
-        canvas.addEventListener('mousemove', onMouseMove);
-        canvas.addEventListener('mouseup', onMouseUp);
-
-        return () => {
-            canvas.removeEventListener('mousedown', onMouseDown);
-            canvas.removeEventListener('mousemove', onMouseMove);
-            canvas.removeEventListener('mouseup', onMouseUp);
-        };
-    }, []);
-
-
 
     if (!dataManager) return <div>Loading chart...</div>;
-    //    console.log('Resized:', size);
-    //    console.log('[Graph2DTab] ', dataManager.get_active_combo_name());
 
     dataManager.set_underlying_price(180.0);
 
@@ -327,6 +155,7 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
                 display: false // 🔥 hide "y vs x" box
             },
             tooltip: {
+                enabled: false, // 🔥 disables the tooltip box
                 mode: 'index',
                 intersect: false
             },
@@ -359,6 +188,7 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
                 display: false // 🔥 hide "y vs x" box
             },
             tooltip: {
+                enabled: false, // 🔥 disables the tooltip box
                 mode: 'index',
                 intersect: false
             },
@@ -366,6 +196,7 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
     });
 
     const chartOptionsPL = createPLOptions(1);
+
     const chartGreeks = [];
     let chartOptionsGreeks = []
     const chartGreeksIndexes = []
@@ -440,21 +271,10 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
         });
     }
 
-/*
-    const options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        plugins: {
-            legend: { display: false }
-        },
-        scales: {
-            x: { type: 'linear', min: 150, max: 250 },
-            y: { min: -4000, max: 1300 }
-        }
-    };
-*/
-
+    ChartJS.unregister({
+        id: 'crosshair',
+        beforeEvent: () => { }
+    });
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '4px' }}>
