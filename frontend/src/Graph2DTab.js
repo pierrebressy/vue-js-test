@@ -136,75 +136,96 @@ export default function Graph2DTab({ dataManager }) {
     const labelRefs = useRef([]);
     const draggingLabel = useRef(null);
 
+    const [renderTrigger, setRenderTrigger] = useState(0);
+
     useEffect(() => {
         if (!dataManager) return;
         const legs = dataManager.get_combo_params().legs;
         labelRefs.current = legs.map(leg => ({ current: leg.strike }));
     }, [dataManager]);
-/*
-    const legLinesPlugin = useMemo(() => {
-        if (!dataManager) return null;
-        const legs = dataManager.get_combo_params().legs;
-        return createLegLinesPlugin(legs);
+    /*
+        const legLinesPlugin = useMemo(() => {
+            if (!dataManager) return null;
+            const legs = dataManager.get_combo_params().legs;
+            return createLegLinesPlugin(legs);
+        }, [dataManager]);
+    */
+
+    useEffect(() => {
+        const chart = chartRefPL.current;
+        if (!chart) return;
+        const canvas = chart.canvas;
+
+        const getMouse = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        };
+
+        const onMouseDown = (e) => {
+            const pos = getMouse(e);
+            const boxes = chart._labelBoxes || {};
+            for (const [index, box] of Object.entries(boxes)) {
+                if (
+                    pos.x >= box.x &&
+                    pos.x <= box.x + box.width &&
+                    pos.y >= box.y &&
+                    pos.y <= box.y + box.height
+                ) {
+                    draggingLabel.current = parseInt(index);
+                    e.preventDefault();
+                    break;
+                }
+            }
+        };
+
+        /*        const onMouseMove = (e) => {
+                    if (draggingLabel.current == null) return;
+                    const pos = getMouse(e);
+                    const scale = chart.scales.x;
+                    const xVal = scale.getValueForPixel(pos.x);
+        
+                    labelRefs.current[draggingLabel.current].current = xVal;
+                    dataManager.get_combo_params().legs[draggingLabel.current].strike = xVal;
+                    chart.update('none');
+                    e.preventDefault();
+                };*/
+        const onMouseMove = (e) => {
+            if (draggingLabel.current == null) return;
+            const pos = getMouse(e);
+            const scale = chart.scales.x;
+            const xVal = scale.getValueForPixel(pos.x);
+
+            const legIndex = draggingLabel.current;
+            labelRefs.current[legIndex].current = xVal;
+
+            // 🔁 Update strike in dataManager
+            dataManager.get_combo_params().legs[legIndex].strike = xVal;
+
+            // ✅ Trigger recomputation if needed
+            compute_data_to_display(dataManager, false);
+            setRenderTrigger(t => t + 1);
+
+            chart.update('none');
+            e.preventDefault();
+        };
+
+        const onMouseUp = () => {
+            draggingLabel.current = null;
+        };
+
+        canvas.addEventListener('mousedown', onMouseDown);
+        canvas.addEventListener('mousemove', onMouseMove);
+        canvas.addEventListener('mouseup', onMouseUp);
+
+        return () => {
+            canvas.removeEventListener('mousedown', onMouseDown);
+            canvas.removeEventListener('mousemove', onMouseMove);
+            canvas.removeEventListener('mouseup', onMouseUp);
+        };
     }, [dataManager]);
-*/
-
-  useEffect(() => {
-    const chart = chartRefPL.current;
-    if (!chart) return;
-    const canvas = chart.canvas;
-
-    const getMouse = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
-      };
-    };
-
-    const onMouseDown = (e) => {
-      const pos = getMouse(e);
-      const boxes = chart._labelBoxes || {};
-      for (const [index, box] of Object.entries(boxes)) {
-        if (
-          pos.x >= box.x &&
-          pos.x <= box.x + box.width &&
-          pos.y >= box.y &&
-          pos.y <= box.y + box.height
-        ) {
-          draggingLabel.current = parseInt(index);
-          e.preventDefault();
-          break;
-        }
-      }
-    };
-
-    const onMouseMove = (e) => {
-      if (draggingLabel.current == null) return;
-      const pos = getMouse(e);
-      const scale = chart.scales.x;
-      const xVal = scale.getValueForPixel(pos.x);
-
-      labelRefs.current[draggingLabel.current].current = xVal;
-      dataManager.get_combo_params().legs[draggingLabel.current].strike = xVal;
-      chart.update('none');
-      e.preventDefault();
-    };
-
-    const onMouseUp = () => {
-      draggingLabel.current = null;
-    };
-
-    canvas.addEventListener('mousedown', onMouseDown);
-    canvas.addEventListener('mousemove', onMouseMove);
-    canvas.addEventListener('mouseup', onMouseUp);
-
-    return () => {
-      canvas.removeEventListener('mousedown', onMouseDown);
-      canvas.removeEventListener('mousemove', onMouseMove);
-      canvas.removeEventListener('mouseup', onMouseUp);
-    };
-  }, [dataManager]);
 
 
 
@@ -391,7 +412,7 @@ export default function Graph2DTab({ dataManager }) {
         });
     }
 
-  const legLinesPlugin = useMemo(() => createLegLinesPlugin(dataManager, labelRefs), [dataManager]);
+    const legLinesPlugin = useMemo(() => createLegLinesPlugin(dataManager, labelRefs), [dataManager]);
 
     if (!dataManager) return <div>Loading chart...</div>;
 
