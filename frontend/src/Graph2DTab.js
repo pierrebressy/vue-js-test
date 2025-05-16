@@ -25,7 +25,27 @@ ChartJS.register(
     Tooltip,
     Legend);
 
-function createLegLinesPlugin(dataManager, labelRefs, zeroCrossings) {
+function findZeroCrossings(data) {
+    const zeros = [];
+    for (let i = 1; i < data.length; i++) {
+        const prev = data[i - 1].y;
+        const curr = data[i].y;
+        if ((prev < 0 && curr >= 0) || (prev > 0 && curr <= 0)) {
+            console.log("  i", i);
+            // Linear interpolation for better accuracy
+            const x0 = data[i - 1].x;
+            const x1 = data[i].x;
+            const y0 = prev;
+            const y1 = curr;
+            const xZero = x0 - y0 * (x1 - x0) / (y1 - y0);
+            zeros.push(xZero);
+            console.log("  xZero", xZero);
+        }
+    }
+    return zeros;
+}
+
+function createLegLinesPlugin(dataManager, labelRefs) {
     return {
         id: 'legLines',
         afterDraw(chart) {
@@ -37,9 +57,11 @@ function createLegLinesPlugin(dataManager, labelRefs, zeroCrossings) {
             const fontFamily = 'Menlo, monospace';
             chart._labelBoxes = {};
 
-
+            const zeroCrossings = findZeroCrossings(dataManager.get_pl_at_sim_data());
+            console.log("zeroCrossings", zeroCrossings);
             // ➕ Orange 0-crossing lines
             zeroCrossings.forEach((xValue, idx) => {
+            console.log("  xValue", xValue);
                 const xPixel = scales.x.getPixelForValue(xValue);
                 const label = `${xValue.toFixed(1)}`;
 
@@ -84,14 +106,14 @@ function createLegLinesPlugin(dataManager, labelRefs, zeroCrossings) {
                 // Determine color and label
                 let color = 'blue';
                 let labelText = `${xValue.toFixed(1)}`;
-                let boxY = chartArea.bottom-50;
+                let boxY = chartArea.bottom - 50;
 
                 if (i < dataManager.get_combo_params().legs.length) {
                     const leg = dataManager.get_combo_params().legs[i];
                     color = leg.type === 'put' ? 'green' : 'red';
                     const type = leg.type === 'put' ? 'P' : 'C';
                     labelText = `${leg.qty} ${type} ${xValue.toFixed(1)}`;
-                    boxY=chartArea.top-10;
+                    boxY = chartArea.top - 10;
                 }
 
 
@@ -133,7 +155,7 @@ function createLegLinesPlugin(dataManager, labelRefs, zeroCrossings) {
     };
 }
 
-export default function Graph2DTab({ dataManager }) {
+export default function Graph2DTab({ dataManager, days_left, mean_volatility}) {
 
     const chartRefPL = useRef(null);
     const chartRefGreek = useRef(null);
@@ -143,23 +165,6 @@ export default function Graph2DTab({ dataManager }) {
 
     const [renderTrigger, setRenderTrigger] = useState(0);
 
-    function findZeroCrossings(data) {
-        const zeros = [];
-        for (let i = 1; i < data.length; i++) {
-            const prev = data[i - 1].y;
-            const curr = data[i].y;
-            if ((prev < 0 && curr >= 0) || (prev > 0 && curr <= 0)) {
-                // Linear interpolation for better accuracy
-                const x0 = data[i - 1].x;
-                const x1 = data[i].x;
-                const y0 = prev;
-                const y1 = curr;
-                const xZero = x0 - y0 * (x1 - x0) / (y1 - y0);
-                zeros.push(xZero);
-            }
-        }
-        return zeros;
-    }
 
 
 
@@ -411,7 +416,6 @@ export default function Graph2DTab({ dataManager }) {
         chart_option.scales.y.title.text = dataManager.graph_params.greeks.labels[greek_index];
         chartOptionsGreeks.push(chart_option);
 
-        const rawData = dataManager.get_greeks_data()[greek_index]
 
         chartGreeks.push({
             datasets: [
@@ -429,14 +433,9 @@ export default function Graph2DTab({ dataManager }) {
     }
 
     //const legLinesPlugin = useMemo(() => createLegLinesPlugin(dataManager, labelRefs), [dataManager]);
-    const zeroCrossings = useMemo(() => {
-        if (!dataManager) return [];
-        return findZeroCrossings(dataManager.get_pl_at_sim_data());
-    }, [dataManager]);
-
     const legLinesPlugin = useMemo(
-        () => createLegLinesPlugin(dataManager, labelRefs, zeroCrossings),
-        [dataManager, zeroCrossings]
+        () => createLegLinesPlugin(dataManager, labelRefs),
+    [dataManager] 
     );
 
     if (!dataManager) return <div>Loading chart...</div>;

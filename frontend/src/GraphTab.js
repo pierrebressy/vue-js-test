@@ -43,7 +43,7 @@ export default function GraphTab({ dataManager }) {
             id: 'graph2d',
             label: '📈 P/L & Greeks Graphs',
             content: dataManager
-                ? <Graph2DTab dataManager={dataManager}   />
+                ? <Graph2DTab dataManager={dataManager} days_left={days_left} mean_volatility={mean_volatility}  />
                 : <div>[GraphTab] Loading chart...</div>
         },
         {
