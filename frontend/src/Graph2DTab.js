@@ -25,7 +25,7 @@ ChartJS.register(
     Tooltip,
     Legend);
 
-function createLegLinesPlugin(dataManager, labelRefs) {
+function createLegLinesPlugin(dataManager, labelRefs, zeroCrossings) {
     return {
         id: 'legLines',
         afterDraw(chart) {
@@ -37,6 +37,45 @@ function createLegLinesPlugin(dataManager, labelRefs) {
             const fontFamily = 'Menlo, monospace';
             chart._labelBoxes = {};
 
+
+            // ➕ Orange 0-crossing lines
+            zeroCrossings.forEach((xValue, idx) => {
+                const xPixel = scales.x.getPixelForValue(xValue);
+                const label = `${xValue.toFixed(1)}`;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(xPixel, chartArea.top);
+                ctx.lineTo(xPixel, chartArea.bottom);
+                ctx.strokeStyle = 'orange';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.save();
+                ctx.font = `${fontSize}px ${fontFamily}`;
+                const textWidth = ctx.measureText(label).width;
+                const boxWidth = textWidth + padding * 2;
+                const boxHeight = fontSize + padding;
+                const boxX = xPixel - boxWidth / 2;
+                const boxY = chartArea.bottom - 25;
+
+                ctx.fillStyle = 'orange';
+                ctx.beginPath();
+                ctx.roundRect?.(boxX, boxY, boxWidth, boxHeight, 4);
+                ctx.fill();
+
+                ctx.fillStyle = 'white';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(label, xPixel, boxY + boxHeight / 2);
+                ctx.restore();
+            });
+
+
+
+
+
             labelRefs.current.forEach((ref, i) => {
                 const xValue = ref.current;
                 const xPixel = scales.x.getPixelForValue(xValue);
@@ -44,13 +83,15 @@ function createLegLinesPlugin(dataManager, labelRefs) {
 
                 // Determine color and label
                 let color = 'blue';
-                let labelText = `Underlying: ${xValue.toFixed(1)}`;
+                let labelText = `${xValue.toFixed(1)}`;
+                let boxY = chartArea.bottom-50;
 
                 if (i < dataManager.get_combo_params().legs.length) {
                     const leg = dataManager.get_combo_params().legs[i];
                     color = leg.type === 'put' ? 'green' : 'red';
                     const type = leg.type === 'put' ? 'P' : 'C';
-                    labelText = `${leg.quantity} ${type} ${xValue.toFixed(1)}`;
+                    labelText = `${leg.qty} ${type} ${xValue.toFixed(1)}`;
+                    boxY=chartArea.top-10;
                 }
 
 
@@ -74,7 +115,6 @@ function createLegLinesPlugin(dataManager, labelRefs) {
                 const boxWidth = textWidth + padding * 2;
                 const boxHeight = fontSize + padding;
                 const boxX = xPixel - boxWidth / 2;
-                const boxY = chartArea.top + 10 + i * 20;
 
                 ctx.fillStyle = color;
                 ctx.beginPath();
@@ -103,6 +143,26 @@ export default function Graph2DTab({ dataManager }) {
 
     const [renderTrigger, setRenderTrigger] = useState(0);
 
+    function findZeroCrossings(data) {
+        const zeros = [];
+        for (let i = 1; i < data.length; i++) {
+            const prev = data[i - 1].y;
+            const curr = data[i].y;
+            if ((prev < 0 && curr >= 0) || (prev > 0 && curr <= 0)) {
+                // Linear interpolation for better accuracy
+                const x0 = data[i - 1].x;
+                const x1 = data[i].x;
+                const y0 = prev;
+                const y1 = curr;
+                const xZero = x0 - y0 * (x1 - x0) / (y1 - y0);
+                zeros.push(xZero);
+            }
+        }
+        return zeros;
+    }
+
+
+
     useEffect(() => {
         if (!dataManager) return;
         const legs = dataManager.get_combo_params().legs;
@@ -111,13 +171,6 @@ export default function Graph2DTab({ dataManager }) {
             { current: dataManager.get_underlying_price() } // ➕ add underlying
         ];
     }, [dataManager]);
-    /*
-        const legLinesPlugin = useMemo(() => {
-            if (!dataManager) return null;
-            const legs = dataManager.get_combo_params().legs;
-            return createLegLinesPlugin(legs);
-        }, [dataManager]);
-    */
 
     useEffect(() => {
         const chart = chartRefPL.current;
@@ -199,7 +252,7 @@ export default function Graph2DTab({ dataManager }) {
 
 
 
-    dataManager.set_underlying_price(180.0);
+    dataManager.set_underlying_price(190.4);
 
     compute_data_to_display(dataManager, false);
     const rawData = dataManager.get_pl_at_sim_data(); // [{x, y}]
@@ -375,7 +428,16 @@ export default function Graph2DTab({ dataManager }) {
         });
     }
 
-    const legLinesPlugin = useMemo(() => createLegLinesPlugin(dataManager, labelRefs), [dataManager]);
+    //const legLinesPlugin = useMemo(() => createLegLinesPlugin(dataManager, labelRefs), [dataManager]);
+    const zeroCrossings = useMemo(() => {
+        if (!dataManager) return [];
+        return findZeroCrossings(dataManager.get_pl_at_sim_data());
+    }, [dataManager]);
+
+    const legLinesPlugin = useMemo(
+        () => createLegLinesPlugin(dataManager, labelRefs, zeroCrossings),
+        [dataManager, zeroCrossings]
+    );
 
     if (!dataManager) return <div>Loading chart...</div>;
 

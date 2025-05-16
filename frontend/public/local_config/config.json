@@ -96,7 +96,7 @@
                 "mean_volatility": 0.20,
                 "min_price": 150,
                 "step": 0.1,
-                "time_for_simulation": 14,
+                "time_for_simulation": 7,
                 "time_to_expiry": 14
             },
             "ticker": "AAPL",
@@ -868,7 +868,7 @@
         "volatility_is_per_leg": false
     },
     "active": {
-        "combo_name": "CPS",
+        "combo_name": "SHORT PUT",
         "U_use_real_values": false
     },
     "graph": {
