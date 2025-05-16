@@ -163,7 +163,7 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility}) {
     const labelRefs = useRef([]);
     const draggingLabel = useRef(null);
 
-    const [renderTrigger, setRenderTrigger] = useState(0);
+    const [, setRenderTrigger] = useState(0);
 
 
 

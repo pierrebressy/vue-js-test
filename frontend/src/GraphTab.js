@@ -22,7 +22,7 @@ export default function GraphTab({ dataManager }) {
     }
 
     const [days_left, setDays_left] = useState(dataManager.get_time_for_simulation_of_active_combo());
-    const [num_days, setNumDays] = useState(dataManager.get_time_to_expiry_of_active_combo())
+    const [num_days] = useState(dataManager.get_time_to_expiry_of_active_combo())
     const [byLeg, setByLeg] = useState(false);
     const [computed, setComputed] = useState(false);
     const [mean_volatility, setMean_volatility] = useState(0.2);

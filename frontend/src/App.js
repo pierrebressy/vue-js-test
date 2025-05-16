@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import ComboBuilderTab from './ComboBuilderTab';
 import GraphTab from './GraphTab';
 import { cookie_manager } from './cookie';
-import { is_mode_local, load_local_price, load_local_config, fetch_price } from './network.js';
+import { load_local_config } from './network.js';
 import { DataManager } from './data_manager.js';
 import './App.css';
 let use_local = false;
@@ -28,8 +28,6 @@ function App() {
 
   function set_last_main_tab(tab_name) {
     cookie_manager.set_cookie("last_main_tab", tab_name, 365);
-    let mode = cookie_manager.get_cookie("last_main_tab");
-    //console.log("[set_last_main_tab]", mode);
   }
   function get_last_main_tab() {
     let mode = cookie_manager.get_cookie("last_main_tab");
