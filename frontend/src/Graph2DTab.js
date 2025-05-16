@@ -31,7 +31,7 @@ function findZeroCrossings(data) {
         const prev = data[i - 1].y;
         const curr = data[i].y;
         if ((prev < 0 && curr >= 0) || (prev > 0 && curr <= 0)) {
-            console.log("  i", i);
+            //console.log("  i", i);
             // Linear interpolation for better accuracy
             const x0 = data[i - 1].x;
             const x1 = data[i].x;
@@ -39,13 +39,14 @@ function findZeroCrossings(data) {
             const y1 = curr;
             const xZero = x0 - y0 * (x1 - x0) / (y1 - y0);
             zeros.push(xZero);
-            console.log("  xZero", xZero);
+            //console.log("  xZero", xZero);
         }
     }
     return zeros;
 }
 
-function createLegLinesPlugin(dataManager, labelRefs) {
+function createLegLinesPlugin(dataManager, labelRefs, zc) {
+    //console.log("[createLegLinesPlugin] zc=", zc);
     return {
         id: 'legLines',
         afterDraw(chart) {
@@ -57,11 +58,11 @@ function createLegLinesPlugin(dataManager, labelRefs) {
             const fontFamily = 'Menlo, monospace';
             chart._labelBoxes = {};
 
-            const zeroCrossings = findZeroCrossings(dataManager.get_pl_at_sim_data());
-            console.log("zeroCrossings", zeroCrossings);
+            //const zeroCrossings = findZeroCrossings(dataManager.get_pl_at_sim_data());
+            //console.log("zeroCrossings", zeroCrossings);
             // ➕ Orange 0-crossing lines
-            zeroCrossings.forEach((xValue, idx) => {
-            console.log("  xValue", xValue);
+            zc.forEach((xValue, idx) => {
+                //console.log("  xValue", xValue);
                 const xPixel = scales.x.getPixelForValue(xValue);
                 const label = `${xValue.toFixed(1)}`;
 
@@ -155,7 +156,7 @@ function createLegLinesPlugin(dataManager, labelRefs) {
     };
 }
 
-export default function Graph2DTab({ dataManager, days_left, mean_volatility}) {
+export default function Graph2DTab({ dataManager, days_left, mean_volatility }) {
 
     const chartRefPL = useRef(null);
     const chartRefGreek = useRef(null);
@@ -163,9 +164,9 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility}) {
     const labelRefs = useRef([]);
     const draggingLabel = useRef(null);
 
-    const [, setRenderTrigger] = useState(0);
+    const [renderTrigger, setRenderTrigger] = useState(0);
 
-
+    const zeroCrossings = useRef([]);
 
 
     useEffect(() => {
@@ -227,6 +228,8 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility}) {
 
             // ✅ Trigger recomputation if needed
             compute_data_to_display(dataManager, false);
+            zeroCrossings.current = findZeroCrossings(dataManager.get_pl_at_sim_data());
+            //console.log("[onMouseMove] zeroCrossings=", zeroCrossings);
             setRenderTrigger(t => t + 1);
 
             chart.update('none');
@@ -249,6 +252,18 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility}) {
     }, [dataManager]);
 
 
+    useEffect(() => {
+        if (!dataManager) return;
+
+        // Recalcule toutes les données
+        compute_data_to_display(dataManager, false);
+
+        // Met à jour les zéro-crossings
+        zeroCrossings.current = findZeroCrossings(dataManager.get_pl_at_sim_data());
+
+        // Déclenche un re-render pour que le plugin soit recréé
+        setRenderTrigger(t => t + 1);
+    }, [days_left, mean_volatility]);
 
 
     useEffect(() => {
@@ -336,7 +351,6 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility}) {
 
         ]
     };
-
     const createPLOptions = (groupId) => ({
         responsive: true,
         maintainAspectRatio: false,
@@ -432,11 +446,24 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility}) {
         });
     }
 
-    //const legLinesPlugin = useMemo(() => createLegLinesPlugin(dataManager, labelRefs), [dataManager]);
-    const legLinesPlugin = useMemo(
-        () => createLegLinesPlugin(dataManager, labelRefs),
-    [dataManager] 
-    );
+    useEffect(() => {
+        if (!chartRefPL.current) return;
+
+        const chart = chartRefPL.current;
+
+        const plugin = createLegLinesPlugin(dataManager, labelRefs, zeroCrossings.current);
+
+        // Retirer l'ancien plugin s'il existe
+        const existingIndex = chart.config.plugins.findIndex(p => p.id === 'legLines');
+        if (existingIndex !== -1) {
+            chart.config.plugins.splice(existingIndex, 1);
+        }
+
+        // Ajouter le plugin mis à jour
+        chart.config.plugins.push(plugin);
+
+        chart.update(); // 🔁 Recalcul/redessine
+    }, [dataManager, renderTrigger, days_left, mean_volatility]);
 
     if (!dataManager) return <div>Loading chart...</div>;
 
@@ -447,7 +474,6 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility}) {
                     ref={chartRefPL}
                     data={chartPL}
                     options={chartOptionsPL}
-                    plugins={legLinesPlugin ? [legLinesPlugin] : []}
                 />
             </div>
             {chartGreeksIndexes.map(i => (
