@@ -240,14 +240,14 @@ export default function GraphTab({ dataManager }) {
         );
     }
 
-
+/*
     useEffect(() => {
         if (dataManager) {
             console.log('[GraphTab] DataManager is ready');
             // process data or rebuild chart here
         }
     }, [dataManager]);
-
+*/
     useEffect(() => {
         //console.log('[GraphTab] days_left=',days_left);
         dataManager.set_time_for_simulation_of_active_combo(parseFloat(days_left));
@@ -260,6 +260,7 @@ export default function GraphTab({ dataManager }) {
     if (!dataManager) return <div>[GraphTab] Loading chart...</div>;
 
 
+    dataManager.set_underlying_price(190.4);
 
 
     return (

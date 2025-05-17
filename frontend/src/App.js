@@ -116,11 +116,11 @@ function App() {
       const instance = new DataManager(true);
       try {
         const load = async () => {
-          console.log('Loading...');
-          console.log(instance);
+          //console.log('Loading...');
+          //console.log(instance);
           await instance.setup(true); // optional if DataManager is async
           setDataManager(instance);
-          console.log('Loaded.');
+          //console.log('Loaded.');
         };
         load();
       } catch (err) {
@@ -131,13 +131,13 @@ function App() {
     };
     loadData();
   }, []);
-
+/*
   useEffect(() => {
     if (dataManager) {
       console.log('[useEffect] dataManager is now ready:', dataManager);
     }
   }, [dataManager]);
-
+*/
 
 
   return (

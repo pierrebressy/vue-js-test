@@ -46,7 +46,7 @@ function findZeroCrossings(data) {
 }
 
 function createLegLinesPlugin(dataManager, labelRefs, zc) {
-    //console.log("[createLegLinesPlugin] zc=", zc);
+    //console.log("[createLegLinesPlugin] labelRefs=", labelRefs);
     return {
         id: 'legLines',
         afterDraw(chart) {
@@ -58,11 +58,8 @@ function createLegLinesPlugin(dataManager, labelRefs, zc) {
             const fontFamily = 'Menlo, monospace';
             chart._labelBoxes = {};
 
-            //const zeroCrossings = findZeroCrossings(dataManager.get_pl_at_sim_data());
-            //console.log("zeroCrossings", zeroCrossings);
             // ➕ Orange 0-crossing lines
             zc.forEach((xValue, idx) => {
-                //console.log("  xValue", xValue);
                 const xPixel = scales.x.getPixelForValue(xValue);
                 const label = `${xValue.toFixed(1)}`;
 
@@ -117,10 +114,6 @@ function createLegLinesPlugin(dataManager, labelRefs, zc) {
                     boxY = chartArea.top - 10;
                 }
 
-
-
-
-
                 // Draw line
                 ctx.save();
                 ctx.beginPath();
@@ -167,16 +160,73 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
     const [renderTrigger, setRenderTrigger] = useState(0);
 
     const zeroCrossings = useRef([]);
+    const [chartPL2, setChartPL2] = useState({});
 
+    const createPLOptions = (groupId) => ({
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        scales: {
+            x: {
+                type: 'linear',
+                min: 150,
+                max: 230,
+                title: {
+                    display: false,
+                    text: 'x'
+                }
+            },
+            y: {
+                title: {
+                    display: true,
+                    text: 'y'
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false // 🔥 hide "y vs x" box
+            },
+            tooltip: {
+                enabled: false, // 🔥 disables the tooltip box
+                mode: 'index',
+                intersect: false
+            },
 
-    useEffect(() => {
-        if (!dataManager) return;
-        const legs = dataManager.get_combo_params().legs;
-        labelRefs.current = [
-            ...legs.map(leg => ({ current: leg.strike })),
-            { current: dataManager.get_underlying_price() } // ➕ add underlying
-        ];
-    }, [dataManager]);
+        }
+    });
+    const createGreeksOptions = (groupId) => ({
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        scales: {
+            x: {
+                type: 'linear',
+                min: 150,
+                max: 230,
+                title: {
+                    display: false,
+                    //text: 'x'
+                }
+            },
+            y: {
+                title: {
+                    display: true,
+                    text: 'QQQ'
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false // 🔥 hide "y vs x" box
+            },
+            tooltip: {
+                enabled: false, // 🔥 disables the tooltip box
+                mode: 'index',
+                intersect: false
+            },
+        }
+    });
 
     useEffect(() => {
         const chart = chartRefPL.current;
@@ -194,6 +244,7 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
         const onMouseDown = (e) => {
             const pos = getMouse(e);
             const boxes = chart._labelBoxes || {};
+            //console.log("[onMouseDown] boxes=", boxes);
             for (const [index, box] of Object.entries(boxes)) {
                 if (
                     pos.x >= box.x &&
@@ -217,19 +268,22 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
             const legIndex = draggingLabel.current;
             labelRefs.current[legIndex].current = xVal;
 
-            labelRefs.current[draggingLabel.current].current = xVal;
+            //console.log("[onMouseMove] labelRefs.current[legIndex].current=", labelRefs.current[legIndex]);
+            //            labelRefs.current[draggingLabel.current].current = xVal;
 
-            if (draggingLabel.current < dataManager.get_combo_params().legs.length) {
+            //if (draggingLabel.current < dataManager.get_combo_params().legs.length) {
+            if (labelRefs.current[legIndex].id === "leg") {
                 // 🔁 Update strike in dataManager
                 dataManager.get_combo_params().legs[draggingLabel.current].strike = xVal;
-            } else {
+            }
+            else if (labelRefs.current[legIndex].id === "underlying") {
                 dataManager.set_underlying_price(xVal); // underlying
             }
 
             // ✅ Trigger recomputation if needed
             compute_data_to_display(dataManager, false);
             zeroCrossings.current = findZeroCrossings(dataManager.get_pl_at_sim_data());
-            //console.log("[onMouseMove] zeroCrossings=", zeroCrossings);
+            //console.log("[onMouseMove] zeroCrossings=", zeroCrossings.current[0]);
             setRenderTrigger(t => t + 1);
 
             chart.update('none');
@@ -258,27 +312,27 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
         // Recalcule toutes les données
         compute_data_to_display(dataManager, false);
 
+        const legs = dataManager.get_combo_params().legs;
+        labelRefs.current = [
+            ...legs.map(leg => ({ current: leg.strike, id: "leg" })),
+            { current: dataManager.get_underlying_price(), id: "underlying" } // ➕ add underlying
+        ];
+
         // Met à jour les zéro-crossings
         zeroCrossings.current = findZeroCrossings(dataManager.get_pl_at_sim_data());
+        setChartPL2(chartPL);
+        console.log("[GraphTab] chartPL2=", chartPL2);
 
         // Déclenche un re-render pour que le plugin soit recréé
         setRenderTrigger(t => t + 1);
-    }, [days_left, mean_volatility]);
+    }, [dataManager, days_left, mean_volatility]);
 
 
-    useEffect(() => {
-        compute_data_to_display(dataManager, false);
-    }, [dataManager]);
-
-
-
-    dataManager.set_underlying_price(190.4);
 
     compute_data_to_display(dataManager, false);
     const rawData = dataManager.get_pl_at_sim_data(); // [{x, y}]
     const yPositive = rawData.map(p => (p.y >= 0 ? p : { x: p.x, y: null }));
     const yNegative = rawData.map(p => (p.y < 0 ? p : { x: p.x, y: null }));
-
     const chartPL = {
         datasets: [
             {
@@ -351,72 +405,6 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
 
         ]
     };
-    const createPLOptions = (groupId) => ({
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        scales: {
-            x: {
-                type: 'linear',
-                min: 150,
-                max: 230,
-                title: {
-                    display: false,
-                    text: 'x'
-                }
-            },
-            y: {
-                title: {
-                    display: true,
-                    text: 'y'
-                }
-            }
-        },
-        plugins: {
-            legend: {
-                display: false // 🔥 hide "y vs x" box
-            },
-            tooltip: {
-                enabled: false, // 🔥 disables the tooltip box
-                mode: 'index',
-                intersect: false
-            },
-
-        }
-    });
-    const createGreeksOptions = (groupId) => ({
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        scales: {
-            x: {
-                type: 'linear',
-                min: 150,
-                max: 230,
-                title: {
-                    display: false,
-                    //text: 'x'
-                }
-            },
-            y: {
-                title: {
-                    display: true,
-                    text: 'QQQ'
-                }
-            }
-        },
-        plugins: {
-            legend: {
-                display: false // 🔥 hide "y vs x" box
-            },
-            tooltip: {
-                enabled: false, // 🔥 disables the tooltip box
-                mode: 'index',
-                intersect: false
-            },
-        }
-    });
-
     const chartOptionsPL = createPLOptions(1);
 
     const chartGreeks = [];
@@ -450,21 +438,17 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
         if (!chartRefPL.current) return;
 
         const chart = chartRefPL.current;
-
         const plugin = createLegLinesPlugin(dataManager, labelRefs, zeroCrossings.current);
-
-        // Retirer l'ancien plugin s'il existe
         const existingIndex = chart.config.plugins.findIndex(p => p.id === 'legLines');
         if (existingIndex !== -1) {
             chart.config.plugins.splice(existingIndex, 1);
         }
-
-        // Ajouter le plugin mis à jour
         chart.config.plugins.push(plugin);
+        chart.update();
+    }, [ renderTrigger]);
 
-        chart.update(); // 🔁 Recalcul/redessine
-    }, [dataManager, renderTrigger, days_left, mean_volatility]);
 
+    
     if (!dataManager) return <div>Loading chart...</div>;
 
     return (
