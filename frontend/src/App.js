@@ -12,6 +12,8 @@ export let ready = false;
 
 function App() {
 
+  const reset=false;
+
   const [dataManager, setDataManager] = useState(null);
 
   function set_dark_mode(value) {
@@ -86,11 +88,15 @@ function App() {
     const loadData = async () => {
       try {
         // force reset main tab to graph
-        if (0) {
+        if (reset) {
           set_last_main_tab('graph')
         }
+        // force last_selected_combo
+        if (reset) {
+          cookie_manager.set_cookie("last_selected_combo", "LONG CALL", 365);
+        }
         // force local config file to be loaded in localStorage
-        if (1) {
+        if (reset) {
           let config_tmp = await load_local_config();
           localStorage.setItem('config', JSON.stringify(config_tmp));
           console.log("[loadData] force local config file to be loaded in localStorage");

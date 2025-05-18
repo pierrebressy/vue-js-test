@@ -5,7 +5,7 @@ export class DataManager {
 
     constructor(local = true) {
         this.local = local;
-        this.ready=false;
+        this.ready = false;
     }
 
     async setup() {
@@ -13,20 +13,24 @@ export class DataManager {
         if (this.local) {
             console.log("DataManager: using local data");
             config = JSON.parse(localStorage.getItem('config'));
-            console.log("DataManager: localStorage config",config);
+            console.log("DataManager: localStorage config", config);
         }
         else {
             console.log("DataManager: using remote data");
             config = await fetch_configuration();
             localStorage.setItem('config', JSON.stringify(config));
         }
+        this.prepare(config);
+        this.ready = true;
+
+    }
+    prepare(config) {
         this.prepare_window_data(config.window);
         this.prepare_graph_data(config.graph);
         this.prepare_computation_data(config.computation);
         this.prepare_combos_list_data(config.combos);
         this.prepare_active_data(config.active);
         this.set_active_combo(config.combos[config.active.combo_name]);
-                this.ready=true;
 
     }
     get_window_height() {
@@ -232,7 +236,7 @@ export class DataManager {
 
     prepare_active_data(data) {
         this.active_data = data
-        //console.log("DataManager: active data prepared", this.active_data);
+        console.log("DataManager: active data prepared", this.active_data);
     }
 
     prepare_active_combo_data(data) {

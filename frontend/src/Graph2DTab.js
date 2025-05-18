@@ -149,7 +149,7 @@ function createLegLinesPlugin(dataManager, labelRefs, zc) {
     };
 }
 
-export default function Graph2DTab({ dataManager, days_left, mean_volatility }) {
+export default function Graph2DTab({ dataManager, days_left, mean_volatility, selectedCombo, byLeg, legs, forceTrigger }) {
 
     const chartRefPL = useRef(null);
     const chartRefGreek = useRef(null);
@@ -281,7 +281,7 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
             }
 
             // ✅ Trigger recomputation if needed
-            compute_data_to_display(dataManager, false);
+            compute_data_to_display(dataManager, byLeg);
             zeroCrossings.current = findZeroCrossings(dataManager.get_pl_at_sim_data());
             //console.log("[onMouseMove] zeroCrossings=", zeroCrossings.current[0]);
             setRenderTrigger(t => t + 1);
@@ -303,14 +303,14 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
             canvas.removeEventListener('mousemove', onMouseMove);
             canvas.removeEventListener('mouseup', onMouseUp);
         };
-    }, [dataManager]);
+    }, [dataManager, selectedCombo]);
 
 
     useEffect(() => {
         if (!dataManager) return;
-
+        console.log("[GraphTab] selectedCombo=", selectedCombo);
         // Recalcule toutes les données
-        compute_data_to_display(dataManager, false);
+        compute_data_to_display(dataManager, byLeg);
 
         const legs = dataManager.get_combo_params().legs;
         labelRefs.current = [
@@ -321,15 +321,14 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
         // Met à jour les zéro-crossings
         zeroCrossings.current = findZeroCrossings(dataManager.get_pl_at_sim_data());
         setChartPL2(chartPL);
-        console.log("[GraphTab] chartPL2=", chartPL2);
 
         // Déclenche un re-render pour que le plugin soit recréé
         setRenderTrigger(t => t + 1);
-    }, [dataManager, days_left, mean_volatility]);
+    }, [dataManager, days_left, mean_volatility, selectedCombo, forceTrigger]);
 
 
 
-    compute_data_to_display(dataManager, false);
+    compute_data_to_display(dataManager, byLeg);
     const rawData = dataManager.get_pl_at_sim_data(); // [{x, y}]
     const yPositive = rawData.map(p => (p.y >= 0 ? p : { x: p.x, y: null }));
     const yNegative = rawData.map(p => (p.y < 0 ? p : { x: p.x, y: null }));
@@ -445,10 +444,10 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility }) 
         }
         chart.config.plugins.push(plugin);
         chart.update();
-    }, [ renderTrigger]);
+    }, [renderTrigger]);
 
 
-    
+
     if (!dataManager) return <div>Loading chart...</div>;
 
     return (
