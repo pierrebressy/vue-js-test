@@ -4,7 +4,6 @@ import { cookie_manager } from './cookie';
 import Graph2DTab from './Graph2DTab';
 import Graph3DTab from './Graph3DTab';
 
-import { initial_legs, sigma_factors } from './consts';
 
 export default function GraphTab({ dataManager }) {
 
@@ -25,7 +24,6 @@ export default function GraphTab({ dataManager }) {
     }
     function get_last_selected_combo() {
         let last_selected_combo = cookie_manager.get_cookie("last_selected_combo");
-        console.log("[get_last_selected_combo]", last_selected_combo);
         if (last_selected_combo === null) {
             last_selected_combo = 'LONG CALL';
             set_last_selected_combo(last_selected_combo);
@@ -39,15 +37,13 @@ export default function GraphTab({ dataManager }) {
     const [computed, setComputed] = useState(false);
     const [mean_volatility, setMean_volatility] = useState(dataManager.get_mean_volatility_of_combo());
     const [selectedCombo, setSelectedCombo] = useState(get_last_selected_combo()); // default is "call"
-    const [legs, setLegs] = useState(initial_legs);
-    //const [legs, setLegs] = useState(dataManager.get);
     const [sigmaIndex, setSigmaIndex] = useState(0);
+    const sigma_factors = dataManager.get_sigma_factors();
     const selectedSigma = sigma_factors[sigmaIndex];
-
     const [combo_options] = useState(dataManager.get_combos_names_list());
     const [renderTrigger, setRenderTrigger] = useState(0);
-
     const [activeTab, setActiveTab] = useState(get_last_graph_tab());
+
     useEffect(() => {
         set_last_graph_tab(activeTab);
     }, [activeTab]);
@@ -59,11 +55,7 @@ export default function GraphTab({ dataManager }) {
             content: dataManager
                 ? <Graph2DTab
                     dataManager={dataManager}
-                    days_left={days_left}
-                    mean_volatility={mean_volatility}
-                    selectedCombo={selectedCombo}
                     byLeg={byLeg}
-                    legs={legs}
                     forceTrigger={renderTrigger}
 
                 />
@@ -81,7 +73,7 @@ export default function GraphTab({ dataManager }) {
         if (dataManager && selectedCombo) {
             dataManager.set_active_combo(selectedCombo);
             dataManager.active_data.combo_name = selectedCombo;
-            setRenderTrigger(t => t + 1); // 🔁 force Graph2DTab à se recréer
+            setRenderTrigger(t => t + 1);
         }
     }, [selectedCombo, dataManager]);
 
@@ -130,7 +122,10 @@ export default function GraphTab({ dataManager }) {
                     max={num_days}
                     step={0.1}
                     value={days_left}
-                    onChange={e => setDays_left(parseFloat(e.target.value))}
+                    onChange={e => {
+                        setDays_left(parseFloat(e.target.value));
+                        setRenderTrigger(t => t + 1);
+                    }}
                     style={{ flex: 1, padding: '8px' }}
                 />
             </div>
@@ -145,7 +140,7 @@ export default function GraphTab({ dataManager }) {
                         checked={byLeg}
                         onChange={(e) => {
                             setByLeg(e.target.checked);
-                            setRenderTrigger(t => t + 1); // 🔁 force Graph2DTab à se recréer
+                            setRenderTrigger(t => t + 1);
                         }}
                     />
                     By leg
@@ -157,7 +152,7 @@ export default function GraphTab({ dataManager }) {
                         checked={computed}
                         onChange={(e) => {
                             setComputed(e.target.checked);
-                            setRenderTrigger(t => t + 1); // 🔁 force Graph2DTab à se recréer
+                            setRenderTrigger(t => t + 1);
                         }}
                         disabled={!byLeg} // ✅ Disable if "By leg" not checked
                     />
@@ -180,7 +175,7 @@ export default function GraphTab({ dataManager }) {
                     value={mean_volatility}
                     onChange={e => {
                         setMean_volatility(parseFloat(e.target.value));
-                        setRenderTrigger(t => t + 1); // 🔁 force Graph2DTab à se recréer
+                        setRenderTrigger(t => t + 1);
                     }}
                     style={{ flex: 1, padding: '8px' }}
                 />
@@ -198,22 +193,11 @@ export default function GraphTab({ dataManager }) {
                     min={0}
                     max={2}
                     step={0.01}
-                    //value={legs[index].volatility}
                     value={dataManager.get_combo_params().legs[index].iv}
                     onChange={e => {
                         const newVol = parseFloat(e.target.value);
-                        console.log("one_leg_volatility_container, index=", index);
-                        console.log("one_leg_volatility_container, newVol=", newVol);
                         dataManager.get_combo_params().legs[index].iv = newVol;
-                        console.log("one_leg_volatility_container, iv=", dataManager.get_combo_params().legs[index].iv);
-                        setLegs(prev =>
-                            prev.map((leg, i) =>
-                                i === index ? { ...leg, volatility: newVol } : leg
-                            )
-                        );
-                        setRenderTrigger(t => t + 1); // 🔁 force Graph2DTab à se recréer
-
-                        //setMean_volatility(0.01+dataManager.get_mean_volatility_of_combo());
+                        setRenderTrigger(t => t + 1);
                     }}
                     style={{ flex: 1, padding: '8px' }}
                 />
@@ -268,28 +252,6 @@ export default function GraphTab({ dataManager }) {
             </div>
         );
     }
-    function left_container_old() {
-        return (
-            <div className="left-container" style={{ flex: '0 0 20%' }}>
-                {local_status_info()}
-                {choose_combo({ selected: selectedCombo, setSelected: setSelectedCombo })}
-                {days_left_container()}
-                {volatility_management_container()}
-                {byLeg
-                    ? (
-                        <>
-                            {one_leg_volatility_container(0)}
-                            {one_leg_volatility_container(1)}
-                            {one_leg_volatility_container(2)}
-                            {one_leg_volatility_container(3)}
-                        </>
-                    )
-                    : mean_volatility_container()
-                }
-                {sigma_factors_container()}
-            </div>
-        );
-    }
     function right_container() {
         return (
             <div className="right-container">
@@ -311,25 +273,12 @@ export default function GraphTab({ dataManager }) {
         );
     }
 
-
     useEffect(() => {
-        if (dataManager) {
-            console.log('[GraphTab] DataManager is ready');
-            // process data or rebuild chart here
-        }
-    }, [dataManager, selectedCombo]);
-
-    useEffect(() => {
-        //console.log('[GraphTab] days_left=',days_left);
         dataManager.set_time_for_simulation_of_active_combo(parseFloat(days_left));
         dataManager.set_mean_volatility_of_combo(dataManager.get_use_real_values(), parseFloat(mean_volatility));
     }, [days_left, mean_volatility, dataManager]);
 
-
-
-    //    days_left
     if (!dataManager) return <div>[GraphTab] Loading chart...</div>;
-
 
     dataManager.set_underlying_price(190.4);
 

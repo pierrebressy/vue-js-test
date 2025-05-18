@@ -125,7 +125,6 @@ function compute_p_and_l_data(global_data, use_legs_volatility, num_days_left) {
     return p_and_l_data
 }
 export function compute_data_to_display(global_data, volatility_is_per_leg) {
-    console.log("[compute_data_to_display], volatility_is_per_leg", volatility_is_per_leg);
     global_data.set_pl_at_exp_data(compute_p_and_l_data(global_data, volatility_is_per_leg, 0));
     global_data.set_pl_at_init_data(compute_p_and_l_data(global_data, volatility_is_per_leg, global_data.get_time_to_expiry_of_active_combo()));
     global_data.set_pl_at_sim_data(compute_p_and_l_data(global_data, volatility_is_per_leg, global_data.get_time_for_simulation_of_active_combo()));

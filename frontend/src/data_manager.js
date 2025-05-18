@@ -236,7 +236,6 @@ export class DataManager {
 
     prepare_active_data(data) {
         this.active_data = data
-        console.log("DataManager: active data prepared", this.active_data);
     }
 
     prepare_active_combo_data(data) {

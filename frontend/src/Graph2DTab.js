@@ -149,7 +149,7 @@ function createLegLinesPlugin(dataManager, labelRefs, zc) {
     };
 }
 
-export default function Graph2DTab({ dataManager, days_left, mean_volatility, selectedCombo, byLeg, legs, forceTrigger }) {
+export default function Graph2DTab({ dataManager, byLeg, forceTrigger }) {
 
     const chartRefPL = useRef(null);
     const chartRefGreek = useRef(null);
@@ -303,12 +303,11 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility, se
             canvas.removeEventListener('mousemove', onMouseMove);
             canvas.removeEventListener('mouseup', onMouseUp);
         };
-    }, [dataManager, selectedCombo]);
+    }, [dataManager]);
 
 
     useEffect(() => {
         if (!dataManager) return;
-        console.log("[GraphTab] selectedCombo=", selectedCombo);
         // Recalcule toutes les données
         compute_data_to_display(dataManager, byLeg);
 
@@ -324,7 +323,7 @@ export default function Graph2DTab({ dataManager, days_left, mean_volatility, se
 
         // Déclenche un re-render pour que le plugin soit recréé
         setRenderTrigger(t => t + 1);
-    }, [dataManager, days_left, mean_volatility, selectedCombo, forceTrigger]);
+    }, [dataManager, forceTrigger]);
 
 
 
