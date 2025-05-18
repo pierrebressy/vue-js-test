@@ -87,9 +87,6 @@ export class DataManager {
     get_simul_step_price_of_combo() {
         return this.combos_list[this.active_data.combo_name].simulation.step;
     }
-    get_interest_rate_of_combo() {
-        return this.combos_list[this.active_data.combo_name].simulation.interest_rate;
-    }
     get_simulation_time_to_expiry() {
         return this.combos_list[this.active_data.combo_name].simulation.time_to_expiry;
     }
@@ -270,11 +267,6 @@ export class DataManager {
     }
     get_original_underlying_price() {
         return this.original_underlying_price;
-    }
-
-    check_if_volatility_is_per_leg() {
-        console.log("DataManager: ", this.computation_params);
-        return this.computation_params.volatility_is_per_leg;
     }
 
     set_volatility_is_per_leg(value) {

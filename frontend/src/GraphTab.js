@@ -4,32 +4,32 @@ import { cookie_manager } from './cookie';
 import Graph2DTab from './Graph2DTab';
 import Graph3DTab from './Graph3DTab';
 
+function set_last_graph_tab(tab_name) {
+    cookie_manager.set_cookie("graph_main_tab", tab_name, 365);
+}
+function get_last_graph_tab() {
+    let mode = cookie_manager.get_cookie("graph_main_tab");
+    //console.log("[get_last_graph_tab]", mode);
+    if (mode === null) {
+        mode = 'graph2d';
+        set_last_graph_tab(mode);
+    }
+    return mode;
+}
+function set_last_selected_combo(combo_name) {
+    cookie_manager.set_cookie("last_selected_combo", combo_name, 365);
+}
+function get_last_selected_combo() {
+    let last_selected_combo = cookie_manager.get_cookie("last_selected_combo");
+    if (last_selected_combo === null) {
+        last_selected_combo = 'LONG CALL';
+        set_last_selected_combo(last_selected_combo);
+    }
+    return last_selected_combo;
+}
+
 
 export default function GraphTab({ dataManager }) {
-
-    function set_last_graph_tab(tab_name) {
-        cookie_manager.set_cookie("graph_main_tab", tab_name, 365);
-    }
-    function get_last_graph_tab() {
-        let mode = cookie_manager.get_cookie("graph_main_tab");
-        //console.log("[get_last_graph_tab]", mode);
-        if (mode === null) {
-            mode = 'graph2d';
-            set_last_graph_tab(mode);
-        }
-        return mode;
-    }
-    function set_last_selected_combo(combo_name) {
-        cookie_manager.set_cookie("last_selected_combo", combo_name, 365);
-    }
-    function get_last_selected_combo() {
-        let last_selected_combo = cookie_manager.get_cookie("last_selected_combo");
-        if (last_selected_combo === null) {
-            last_selected_combo = 'LONG CALL';
-            set_last_selected_combo(last_selected_combo);
-        }
-        return last_selected_combo;
-    }
 
     const [days_left, setDays_left] = useState(dataManager.get_time_for_simulation_of_active_combo());
     const [num_days] = useState(dataManager.get_time_to_expiry_of_active_combo())
@@ -43,39 +43,6 @@ export default function GraphTab({ dataManager }) {
     const [combo_options] = useState(dataManager.get_combos_names_list());
     const [renderTrigger, setRenderTrigger] = useState(0);
     const [activeTab, setActiveTab] = useState(get_last_graph_tab());
-
-    useEffect(() => {
-        set_last_graph_tab(activeTab);
-    }, [activeTab]);
-
-    const tabs = useMemo(() => [
-        {
-            id: 'graph2d',
-            label: '📈 P/L & Greeks Graphs',
-            content: dataManager
-                ? <Graph2DTab
-                    dataManager={dataManager}
-                    byLeg={byLeg}
-                    forceTrigger={renderTrigger}
-
-                />
-                : <div>[GraphTab] Loading chart...</div>
-        },
-        {
-            id: 'graph3d',
-            label: '📈 3D Graphs',
-            content: <Graph3DTab />
-        }
-    ], [dataManager, days_left, mean_volatility, selectedCombo, renderTrigger]);
-
-
-    useEffect(() => {
-        if (dataManager && selectedCombo) {
-            dataManager.set_active_combo(selectedCombo);
-            dataManager.active_data.combo_name = selectedCombo;
-            setRenderTrigger(t => t + 1);
-        }
-    }, [selectedCombo, dataManager]);
 
 
     function local_status_info() {
@@ -272,6 +239,40 @@ export default function GraphTab({ dataManager }) {
             </div>
         );
     }
+
+    const tabs = useMemo(() => [
+        {
+            id: 'graph2d',
+            label: '📈 P/L & Greeks Graphs',
+            content: dataManager
+                ? <Graph2DTab
+                    dataManager={dataManager}
+                    byLeg={byLeg}
+                    forceTrigger={renderTrigger}
+                />
+                : <div>[GraphTab] Loading chart...</div>
+        },
+        {
+            id: 'graph3d',
+            label: '📈 3D Graphs',
+            content: <Graph3DTab />
+        }
+    ], [dataManager, renderTrigger, byLeg]);
+
+
+    useEffect(() => {
+        set_last_graph_tab(activeTab);
+    }, [activeTab]);
+
+
+    useEffect(() => {
+        if (dataManager && selectedCombo) {
+            dataManager.set_active_combo(selectedCombo);
+            dataManager.active_data.combo_name = selectedCombo;
+            setRenderTrigger(t => t + 1);
+        }
+    }, [selectedCombo, dataManager]);
+
 
     useEffect(() => {
         dataManager.set_time_for_simulation_of_active_combo(parseFloat(days_left));

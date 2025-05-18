@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useMemo, useState } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
@@ -160,7 +160,6 @@ export default function Graph2DTab({ dataManager, byLeg, forceTrigger }) {
     const [renderTrigger, setRenderTrigger] = useState(0);
 
     const zeroCrossings = useRef([]);
-    const [chartPL2, setChartPL2] = useState({});
 
     const createPLOptions = (groupId) => ({
         responsive: true,
@@ -303,7 +302,7 @@ export default function Graph2DTab({ dataManager, byLeg, forceTrigger }) {
             canvas.removeEventListener('mousemove', onMouseMove);
             canvas.removeEventListener('mouseup', onMouseUp);
         };
-    }, [dataManager]);
+    }, [dataManager, byLeg]);
 
 
     useEffect(() => {
@@ -319,12 +318,9 @@ export default function Graph2DTab({ dataManager, byLeg, forceTrigger }) {
 
         // Met à jour les zéro-crossings
         zeroCrossings.current = findZeroCrossings(dataManager.get_pl_at_sim_data());
-        setChartPL2(chartPL);
 
-        // Déclenche un re-render pour que le plugin soit recréé
         setRenderTrigger(t => t + 1);
-    }, [dataManager, forceTrigger]);
-
+    }, [dataManager, forceTrigger, byLeg]);
 
 
     compute_data_to_display(dataManager, byLeg);
@@ -404,6 +400,8 @@ export default function Graph2DTab({ dataManager, byLeg, forceTrigger }) {
         ]
     };
     const chartOptionsPL = createPLOptions(1);
+    chartOptionsPL.scales.x.min = dataManager.get_simul_min_price_of_combo();
+    chartOptionsPL.scales.x.max = dataManager.get_simul_max_price_of_combo();
 
     const chartGreeks = [];
     let chartOptionsGreeks = []
@@ -413,6 +411,9 @@ export default function Graph2DTab({ dataManager, byLeg, forceTrigger }) {
         let greek_index = dataManager.graph_params.greeks.ids[i];
         chartGreeksIndexes.push(i);
         let chart_option = createGreeksOptions(1);
+        chart_option.scales.x.min = dataManager.get_simul_min_price_of_combo();
+        chart_option.scales.x.max = dataManager.get_simul_max_price_of_combo();
+
         chart_option.scales.y.title.text = dataManager.graph_params.greeks.labels[greek_index];
         chartOptionsGreeks.push(chart_option);
 
@@ -443,7 +444,7 @@ export default function Graph2DTab({ dataManager, byLeg, forceTrigger }) {
         }
         chart.config.plugins.push(plugin);
         chart.update();
-    }, [renderTrigger]);
+    }, [dataManager, renderTrigger]);
 
 
 

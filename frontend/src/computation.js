@@ -36,14 +36,13 @@ function compute_greeks_data(global_data, use_legs_volatility) {
             let data = compute_greeks_data_for_price(global_data, greek_index, use_legs_volatility, price);
             greeks_data[greek_index].push(data);
         }
-        if (global_data.get_combo_params().legs.length == 1) {
+        if (global_data.get_combo_params().legs.length === 1) {
             // add the computation of the intrinsic value and time value
             let intrinsic_value = 0;
             let time_value = 0;
             const interest_rate_of_combo = global_data.get_interest_rate_of_combo();
             const time_for_simulation_of_combo = global_data.get_time_for_simulation_of_active_combo();
             const mean_volatility_of_combo = global_data.get_mean_volatility_of_combo(get_use_real_values)
-            let greek = 0;
             global_data.get_combo_params().legs.forEach(option => {
                 let ov = get_use_real_values ?
                     option.trade_volatility : option.sim_volatility;

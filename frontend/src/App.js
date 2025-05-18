@@ -136,14 +136,7 @@ function App() {
 
     };
     loadData();
-  }, []);
-/*
-  useEffect(() => {
-    if (dataManager) {
-      console.log('[useEffect] dataManager is now ready:', dataManager);
-    }
-  }, [dataManager]);
-*/
+  }, [reset]);
 
 
   return (
