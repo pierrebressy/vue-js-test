@@ -25,6 +25,16 @@ ChartJS.register(
     Tooltip,
     Legend);
 
+
+export function getCssVarFromTheme(varName) {
+    const themeRoot = document.querySelector('body.light-mode') || document.querySelector('body.dark-mode');
+    if (!themeRoot) return null;
+    const value = getComputedStyle(themeRoot).getPropertyValue(varName);
+    return value?.trim();
+}
+
+
+
 function findZeroCrossings(data) {
     const zeros = [];
     for (let i = 1; i < data.length; i++) {
@@ -46,7 +56,6 @@ function findZeroCrossings(data) {
 }
 
 function createLegLinesPlugin(dataManager, labelRefs, zc) {
-    //console.log("[createLegLinesPlugin] labelRefs=", labelRefs);
     return {
         id: 'legLines',
         afterDraw(chart) {
@@ -67,7 +76,7 @@ function createLegLinesPlugin(dataManager, labelRefs, zc) {
                 ctx.beginPath();
                 ctx.moveTo(xPixel, chartArea.top);
                 ctx.lineTo(xPixel, chartArea.bottom);
-                ctx.strokeStyle = 'orange';
+                ctx.strokeStyle = getCssVarFromTheme('--zc-line-color', 'red');
                 ctx.lineWidth = 1;
                 ctx.stroke();
                 ctx.restore();
@@ -80,12 +89,12 @@ function createLegLinesPlugin(dataManager, labelRefs, zc) {
                 const boxX = xPixel - boxWidth / 2;
                 const boxY = chartArea.bottom - 25;
 
-                ctx.fillStyle = 'orange';
+                ctx.fillStyle = getCssVarFromTheme('--zc-line-color', 'red');
                 ctx.beginPath();
                 ctx.roundRect?.(boxX, boxY, boxWidth, boxHeight, 4);
                 ctx.fill();
 
-                ctx.fillStyle = 'white';
+                ctx.fillStyle = getCssVarFromTheme('--zc-text-color', 'white');
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(label, xPixel, boxY + boxHeight / 2);
@@ -102,13 +111,15 @@ function createLegLinesPlugin(dataManager, labelRefs, zc) {
 
 
                 // Determine color and label
-                let color = 'blue';
+                let color = getCssVarFromTheme('--underlying-line-color', 'blue');
                 let labelText = `${xValue.toFixed(1)}`;
                 let boxY = chartArea.bottom - 50;
 
                 if (i < dataManager.get_combo_params().legs.length) {
                     const leg = dataManager.get_combo_params().legs[i];
-                    color = leg.type === 'put' ? 'green' : 'red';
+                    color = leg.type === 'put' ?
+                        getCssVarFromTheme('--put-label-color', 'green') :
+                        getCssVarFromTheme('--call-label-color', 'red');
                     const type = leg.type === 'put' ? 'P' : 'C';
                     labelText = `${leg.qty} ${type} ${xValue.toFixed(1)}`;
                     boxY = chartArea.top - 10;
@@ -137,7 +148,7 @@ function createLegLinesPlugin(dataManager, labelRefs, zc) {
                 ctx.roundRect?.(boxX, boxY, boxWidth, boxHeight, 4);
                 ctx.fill();
 
-                ctx.fillStyle = 'white';
+                ctx.fillStyle = getCssVarFromTheme('--generic-text-color', 'white');
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(labelText, xPixel, boxY + boxHeight / 2);
@@ -173,12 +184,19 @@ export default function Graph2DTab({ dataManager, byLeg, forceTrigger }) {
                 title: {
                     display: false,
                     text: 'x'
+                },
+                grid: {
+                    color: '#0000ff' // couleur des lignes de la grille en X
                 }
+
             },
             y: {
                 title: {
                     display: true,
                     text: 'y'
+                },
+                grid: {
+                    color: '#0000ff' // couleur des lignes de la grille en X
                 }
             }
         },
@@ -206,12 +224,18 @@ export default function Graph2DTab({ dataManager, byLeg, forceTrigger }) {
                 title: {
                     display: false,
                     //text: 'x'
+                },
+                grid: {
+                    color: '#0000ff' // couleur des lignes de la grille en X
                 }
             },
             y: {
                 title: {
                     display: true,
                     text: 'QQQ'
+                },
+                grid: {
+                    color: '#0000ff' // couleur des lignes de la grille en X
                 }
             }
         },
@@ -267,9 +291,6 @@ export default function Graph2DTab({ dataManager, byLeg, forceTrigger }) {
             const legIndex = draggingLabel.current;
             labelRefs.current[legIndex].current = xVal;
 
-            //console.log("[onMouseMove] labelRefs.current[legIndex].current=", labelRefs.current[legIndex]);
-            //            labelRefs.current[draggingLabel.current].current = xVal;
-
             //if (draggingLabel.current < dataManager.get_combo_params().legs.length) {
             if (labelRefs.current[legIndex].id === "leg") {
                 // 🔁 Update strike in dataManager
@@ -282,7 +303,6 @@ export default function Graph2DTab({ dataManager, byLeg, forceTrigger }) {
             // ✅ Trigger recomputation if needed
             compute_data_to_display(dataManager, byLeg);
             zeroCrossings.current = findZeroCrossings(dataManager.get_pl_at_sim_data());
-            //console.log("[onMouseMove] zeroCrossings=", zeroCrossings.current[0]);
             setRenderTrigger(t => t + 1);
 
             chart.update('none');
@@ -323,16 +343,32 @@ export default function Graph2DTab({ dataManager, byLeg, forceTrigger }) {
     }, [dataManager, forceTrigger, byLeg]);
 
 
+    useEffect(() => {
+        if (!chartRefPL.current) return;
+
+        const chart = chartRefPL.current;
+        const plugin = createLegLinesPlugin(dataManager, labelRefs, zeroCrossings.current);
+        const existingIndex = chart.config.plugins.findIndex(p => p.id === 'legLines');
+        if (existingIndex !== -1) {
+            chart.config.plugins.splice(existingIndex, 1);
+        }
+        chart.config.plugins.push(plugin);
+        chart.update();
+    }, [dataManager, renderTrigger]);
+
+
+    if (!dataManager) return <div>Loading chart...</div>;
     compute_data_to_display(dataManager, byLeg);
-    const rawData = dataManager.get_pl_at_sim_data(); // [{x, y}]
+    const rawData = dataManager?.get_pl_at_sim_data?.() || [];
     const yPositive = rawData.map(p => (p.y >= 0 ? p : { x: p.x, y: null }));
     const yNegative = rawData.map(p => (p.y < 0 ? p : { x: p.x, y: null }));
+
     const chartPL = {
         datasets: [
             {
                 label: 'y vs x',
                 data: dataManager.get_pl_at_exp_data(),
-                borderColor: 'black',
+                borderColor: getCssVarFromTheme('--expiry-line-color', 'rgba(0, 0, 0, 0.1)'),
                 fill: false,
                 tension: 0.1,
                 pointRadius: 0,
@@ -340,7 +376,7 @@ export default function Graph2DTab({ dataManager, byLeg, forceTrigger }) {
             {
                 label: 'y vs x',
                 data: dataManager.get_pl_at_init_data(),
-                borderColor: 'orange',
+                borderColor: getCssVarFromTheme('--init-line-color', 'rgb(255, 127, 8)'),
                 fill: false,
                 tension: 0.1,
                 pointRadius: 0,
@@ -348,7 +384,7 @@ export default function Graph2DTab({ dataManager, byLeg, forceTrigger }) {
             {
                 label: 'y vs x',
                 data: dataManager.get_pl_at_sim_data(),
-                borderColor: 'green',
+                borderColor: getCssVarFromTheme('--sim-line-color', 'rgb(3, 183, 0)'),
                 fill: false,
                 tension: 0.1,
                 pointRadius: 0,
@@ -402,6 +438,8 @@ export default function Graph2DTab({ dataManager, byLeg, forceTrigger }) {
     const chartOptionsPL = createPLOptions(1);
     chartOptionsPL.scales.x.min = dataManager.get_simul_min_price_of_combo();
     chartOptionsPL.scales.x.max = dataManager.get_simul_max_price_of_combo();
+    chartOptionsPL.scales.x.grid.color = getCssVarFromTheme('--grid-color', 'rgba(0, 0, 0, 0.1)');
+    chartOptionsPL.scales.y.grid.color = getCssVarFromTheme('--grid-color', 'rgba(0, 0, 0, 0.1)');
 
     const chartGreeks = [];
     let chartOptionsGreeks = []
@@ -413,6 +451,8 @@ export default function Graph2DTab({ dataManager, byLeg, forceTrigger }) {
         let chart_option = createGreeksOptions(1);
         chart_option.scales.x.min = dataManager.get_simul_min_price_of_combo();
         chart_option.scales.x.max = dataManager.get_simul_max_price_of_combo();
+        chart_option.scales.x.grid.color = getCssVarFromTheme('--grid-color', 'rgba(0, 0, 0, 0.1)');
+        chart_option.scales.y.grid.color = getCssVarFromTheme('--grid-color', 'rgba(0, 0, 0, 0.1)');
 
         chart_option.scales.y.title.text = dataManager.graph_params.greeks.labels[greek_index];
         chartOptionsGreeks.push(chart_option);
@@ -432,23 +472,6 @@ export default function Graph2DTab({ dataManager, byLeg, forceTrigger }) {
             ]
         });
     }
-
-    useEffect(() => {
-        if (!chartRefPL.current) return;
-
-        const chart = chartRefPL.current;
-        const plugin = createLegLinesPlugin(dataManager, labelRefs, zeroCrossings.current);
-        const existingIndex = chart.config.plugins.findIndex(p => p.id === 'legLines');
-        if (existingIndex !== -1) {
-            chart.config.plugins.splice(existingIndex, 1);
-        }
-        chart.config.plugins.push(plugin);
-        chart.update();
-    }, [dataManager, renderTrigger]);
-
-
-
-    if (!dataManager) return <div>Loading chart...</div>;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '4px' }}>

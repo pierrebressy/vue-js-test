@@ -153,14 +153,26 @@ export class DataManager {
     get_pl_at_sim_data() {
         return this.pl_at_sim_data;
     }
-    /*get_min_of_dataset() {
-        const datasets = [this.pl_at_exp_data, this.pl_at_init_data, this.pl_at_sim_data];
+    /*
+    get_min_of_dataset_XXX() {
+      //  const datasets = [this.pl_at_exp_data, this.pl_at_init_data, this.pl_at_sim_data];
         return d3.min(datasets.flat(), d => d.y);
     }
-    get_max_of_dataset() {
+    get_max_of_dataset_XXX() {
         const datasets = [this.pl_at_exp_data, this.pl_at_init_data, this.pl_at_sim_data];
         return d3.max(datasets.flat(), d => d.y);
     }*/
+    get_min_of_dataset() {
+        const datasets = [this.pl_at_exp_data, this.pl_at_init_data, this.pl_at_sim_data];
+        const allPoints = datasets.flat();
+        return Math.min(...allPoints.map(d => d.y));
+    }
+
+    get_max_of_dataset() {
+        const datasets = [this.pl_at_exp_data, this.pl_at_init_data, this.pl_at_sim_data];
+        const allPoints = datasets.flat();
+        return Math.max(...allPoints.map(d => d.y));
+    }
 
     get_mean_volatility_of_combo() {
         return this.combos_list[this.active_data.combo_name].simulation.mean_volatility;

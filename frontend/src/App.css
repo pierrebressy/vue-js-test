@@ -24,6 +24,8 @@ body {
 
 body {
   background-color: var(--bg-body);
+
+
 }
 
 body.light-mode {
@@ -31,8 +33,8 @@ body.light-mode {
   --bg-main-container: #ffffff;
   --text-color: #000000;
 
-  --tab-border-color:rgb(141, 142, 141);
-  --tab-button-inactive-bg-color:rgb(141, 142, 141);
+  --tab-border-color: rgb(141, 142, 141);
+  --tab-button-inactive-bg-color: rgb(141, 142, 141);
   --tab-button-inactive-text-color: rgb(255, 255, 255);
   --tab-button-hover-bg-color: rgb(0, 171, 134);
   --tab-button-hover-text-color: rgb(255, 255, 255);
@@ -46,10 +48,32 @@ body.light-mode {
   --bg-days-left: #adffb9;
   --bg-volatility-main: #b0a6ff;
   --bg-per-leg-volatility: #b0a6ff;
-  --bg-mean-volatility:#b0a6ff;
+  --bg-mean-volatility: #b0a6ff;
   --bg-combo-templater: #1e1e1e;
   --bg-sigma-selector: #a1dcff;
 
+  --zc-line-color: #ff8e2c;
+  --zc-text-color: #ffffff;
+
+  --underlying-line-color: #208fff;
+  --generic-text-color: #ffffff;
+
+  --put-label-color: #009d03;
+  --call-label-color: #ff0e0e;
+
+  --grid-color: #e5e5e5;
+  --expiry-line-color: #000000;
+  --sim-line-color: #38c500;
+  --init-line-color: #d28500;
+
+
+    --xaxis-material-color: #ff0000;
+  --yaxis-material-color: #00ff00;
+  --zaxis-material-color: #4444f2;
+
+      --black-material-color: #ffffff;
+    --green-material-color: #03a200;
+    --orange-material-color: #f8ae00;
 
 }
 
@@ -72,10 +96,28 @@ body.dark-mode {
   --bg-combo-list: #770000;
   --bg-days-left: #02520e;
   --bg-volatility-main: #0e026f;
-  --bg-per-leg-volatility:#0e026f;
-  --bg-mean-volatility:#0e026f;
+  --bg-per-leg-volatility: #0e026f;
+  --bg-mean-volatility: #0e026f;
   --bg-combo-templater: #1e1e1e;
   --bg-sigma-selector: #054f7a;
+
+  --zc-line-color: #ff8e2c;
+  --zc-text-color: #ffffff;
+
+  --underlying-line-color: #208fff;
+  --generic-text-color: #ffffff;
+
+  --put-label-color: #01ca04;
+  --call-label-color: #f54848;
+
+  --grid-color: #2e2e2e;
+  --expiry-line-color: #ffffff;
+  --sim-line-color: #008a2a;
+  --init-line-color: #d28500;
+
+      --black-material-color: #ffffff;
+    --green-material-color: #03a200;
+    --orange-material-color: #f8ae00;
 
 }
 
@@ -91,13 +133,15 @@ body.dark-mode {
   display: flex;
   flex-direction: column;
   height: 100%;
-  width: 100%; /* ✅ full width */
+  width: 100%;
+  /* ✅ full width */
   background-color: var(--bg-main-container);
   border-radius: 8px;
 }
 
 .main-tabs-container {
-  height: 4%; /* fixed 20% height */
+  height: 4%;
+  /* fixed 20% height */
   width: 100%;
   background-color: var(--bg-main-container);
   border-radius: 8px;
@@ -105,7 +149,8 @@ body.dark-mode {
 }
 
 .main-tab-container {
-  flex: 1; /* takes remaining space */
+  flex: 1;
+  /* takes remaining space */
   width: 100%;
   background-color: var(--bg-main-container);
   border-radius: 8px;
@@ -234,11 +279,14 @@ body.dark-mode {
   display: flex;
   flex-direction: column;
   height: 100%;
-  width: 100%; /* ✅ full width */
+  width: 100%;
+  /* ✅ full width */
 
 }
+
 .graphs-tabs-container {
-  height: 4%; /* fixed 20% height */
+  height: 4%;
+  /* fixed 20% height */
   width: 100%;
   background-color: var(--bg-main-container);
   border-radius: 8px;
@@ -246,7 +294,8 @@ body.dark-mode {
 }
 
 .graph-tab-container {
-  flex: 1; /* takes remaining space */
+  flex: 1;
+  /* takes remaining space */
   width: 100%;
   background-color: var(--bg-main-container);
   border-radius: 8px;

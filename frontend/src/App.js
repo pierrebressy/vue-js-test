@@ -27,7 +27,6 @@ function App() {
     }
     return mode;
   }
-
   function set_last_main_tab(tab_name) {
     cookie_manager.set_cookie("last_main_tab", tab_name, 365);
   }
@@ -144,16 +143,16 @@ function App() {
       <button
         onClick={() => setDarkMode(prev => !prev)}
         style={{
-          padding: '8px 16px',
+          padding: '1px 1px',
           borderRadius: '6px',
           backgroundColor: darkMode ? '#333' : '#ddd',
           color: darkMode ? '#fff' : '#000',
           border: '1px solid #999',
           cursor: 'pointer',
-          marginTop: '10px'
+          marginTop: '0px'
         }}
       >
-        {darkMode ? '🌙 Dark Mode' : '☀️ Light Mode'}
+        {darkMode ? '🌙 ➜ ☀️' : '☀️ ➜ 🌙'}
       </button>
       <div className="main-tabs-container">
         {tabs.map(tab => (

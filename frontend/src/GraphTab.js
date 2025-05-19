@@ -255,7 +255,11 @@ export default function GraphTab({ dataManager }) {
         {
             id: 'graph3d',
             label: '📈 3D Graphs',
-            content: <Graph3DTab />
+            content: <Graph3DTab
+                dataManager={dataManager}
+                byLeg={byLeg}
+                forceTrigger={renderTrigger}
+            />
         }
     ], [dataManager, renderTrigger, byLeg]);
 
