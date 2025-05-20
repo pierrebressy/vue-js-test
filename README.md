@@ -34,4 +34,22 @@ API running at http://localhost:3001
 ```
 
 
-npm run start
+## Combo-finder
+
+Modules to install:
+```bash
+pip3 install --upgrade pip
+pip3 install dash dash-bootstrap-components
+```
+
+```bash
+python3 server.py
+```
+Terminal output:
+```txt
+Dash is running on http://127.0.0.1:8050/
+
+ * Serving Flask app 'server'
+ * Debug mode: on
+```
+

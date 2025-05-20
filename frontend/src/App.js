@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import Log from './Log';
+import Parameters from './Parameters';
 import ComboBuilderTab from './ComboBuilderTab';
+import ComboFinderTab from './ComboFinderTab';
 import GraphTab from './GraphTab';
 import { cookie_manager } from './cookie';
 import { load_local_config } from './network.js';
@@ -76,9 +79,9 @@ function App() {
     },
 
     { id: 'combo-builder', label: '🧾 Combo Builder', content: <ComboBuilderTab /> },
-    { id: 'combo-finder', label: '🔍 Combo Finder', content: <GraphTab /> },
-    { id: 'parameters', label: '⚙️ Parameters', content: <GraphTab /> },
-    { id: 'log', label: '🖥️ Log', content: <GraphTab /> }
+    { id: 'combo-finder', label: '🔍 Combo Finder', content: <ComboFinderTab /> },
+    { id: 'parameters', label: '⚙️ Parameters', content: <Parameters /> },
+    { id: 'log', label: '🖥️ Log', content: <Log /> }
   ];
 
 
